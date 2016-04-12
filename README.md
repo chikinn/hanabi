@@ -13,11 +13,13 @@ cards.
 ## Example usage
     $ ./hanabi_wrapper.py cheater cheater 1000 silent
 or
+
     $ ./hanabi_wrapper.py cheater cheater cheater cheater 3 verbose
 
 ## Example output
     AVERAGE SCORE (+/- 1 std. err.): 23.54 +/- 0.09
 or
+
     ROUND 1:
     [HANDS] Cheater1: 3g 4w 2r 1y
             Cheater2: 3r 2b 3w 3y
