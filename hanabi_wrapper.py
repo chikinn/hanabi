@@ -2,7 +2,8 @@
 """Wrapper for playing more than one round of Hanabi.
 
 Command-line arguments (see usage):
-  playeri: Name of the AI that will control each player
+  playeri: Name of the AI that will control each player (currently only one
+    option, 'cheater')
   nRounds: Number of rounds to play
   verbosity: How much output to show ('silent', only final average scores;
     'scores', result of each round; 'verbose', play by play)
@@ -26,6 +27,9 @@ def usage():
 
 if len(sys.argv) < 5:
     usage()
+
+nRounds = int(sys.argv[-2])
+verbosity = sys.argv[-1]
 
 # Load players.
 rawNames = sys.argv[1:-2]
@@ -57,9 +61,6 @@ for name in names:
 for i in range(len(names)):
     while len(names[i]) < len(longestName):
         names[i] += ' '
-
-nRounds = int(sys.argv[-2])
-verbosity = sys.argv[-1]
 
 # Play rounds.
 scores = []

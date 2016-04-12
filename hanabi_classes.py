@@ -27,28 +27,22 @@ def example_fun(arg):
 class Round:
     """Store round info and interact with AI players.
 
-    Attributes (see below) mainly correspond to public knowledge.  The nested
-    Hand class, however, stores private, player-specific info.  Thus there is
-    one Hand per player.
+    The only method that interacts with AIs is 'get_play'.
 
-    Methods whose names begin with 'get_' retrieve a move from an AI player
-    object on their turn.  Taken together these specify all the methods needed
-    for a complete AI class.
-
-    bidHistory (list of int/bool): Chronological bids so far (incl. OK/pass).
-    cardsDeclarerTook (list of str): Cards taken so far by the declarer.
-    cardsDefendersTook (list of str): Ditto for the other team.
-    cardsLeft (list of str): Cards that not all players have seen yet.
-    currentBid (int): Highest bid so far (ignoring OK/pass).
-    currentTrick (list of str): The 0-3 cards played so far this trick. 
-    declaration (list of str): See module-level docstring.
-    h (list of obj): One Hand per player.  NOT public info.
-    jackMultiplier (0 < int < 12): See jack_multiplier().
-    kitty (list of str): Two cards, either for declarer to pick up or already
-      discarded by her.  NOT public info.
-    playHistory (list of str): Chronological cards played so far.
-    verbosity (str): How much to show ('silent', 'scores', or 'verbose').
+    nPlayers (int)
+    h (list of obj): One Hand per player.  Don't look at your hand!
+    whoseTurn (int): ID of current player, between 0 and nPlayers - 1.
+    turnNumber (int): Useful for differentiating otherwise identical cards.
+    playHistory (list of tup): Chronological plays so far.  A 'play' is what
+      an AI's play method returns; see get_play().
+    progress (dict): Keys are suits, values are progress (up to max card).
+    gameOverTimer (int): Will count down once deck is depleted.
+    hints (int): Higher is better.
+    lightning (int): Higher is worse.  A.K.A. fuse.
+    verbosity (str): How much to print ('silent', 'scores', or 'verbose').
     zazz (list of str): Schnazzy labeled indents for verbose output.
+    cardsLeft (list of str): Cards that not all players have seen yet.
+    deck (list of str)
     """
 
     def __init__(self, names, verbosity):
@@ -60,8 +54,7 @@ class Round:
         self.turnNumber    = 0
         self.playHistory   = []
         self.progress      = {suit : 0 for suit in SUITS}
-        self.gameOverTimer = None # Will count down once deck depletes.
-        self.discards      = []
+        self.gameOverTimer = None
         self.hints         = N_HINTS
         self.lightning     = 0
         
@@ -95,6 +88,7 @@ class Round:
         return self.deck.pop(0)
 
     def replace_card(self, card, hand):
+        """Drop the card, draw a new one, and update public info."""
         if not card['known']:
             self.cardsLeft.remove(card['name'])
         hand.drop(card)
@@ -126,7 +120,6 @@ class Round:
             description = card['name']
 
             if playType == 'discard':
-                self.discards.append(card['name'])
                 self.replace_card(card, hand)
                 self.hints = min(self.hints + 1, N_HINTS)
 
