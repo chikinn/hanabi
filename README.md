@@ -7,8 +7,8 @@
       n_rounds: positive integer
       verbosity: silent, scores, or verbose
 
-There is no maximum number of players.  For more than 5, hand size is still 4
-cards.
+There is no maximum number of players.  With more than 5, the hand size is
+still 4 cards.
 
 ## Example usage
     $ ./hanabi_wrapper.py cheater cheater 1000 silent
@@ -34,10 +34,6 @@ or
             Cheater3 plays 1g
             Cheater4 plays 2b
             ...
-            Cheater1 discards 1?
-            Cheater2 discards 4y
-            Cheater3 discards 1w
-            Cheater4 discards 4r
             Cheater1 discards 3r
             Cheater2 discards 1?
             Cheater3 discards 2?
@@ -45,7 +41,7 @@ or
     Score: 28 
 
 ## How to write your own AI player
-Use `CheatingIdiot` as a guide.
+`CheatingIdiot` is the only player I've made so far.  Use it as a guide.
 
 Just make a player class with a `play` method whose only argument is a `Round`
 instance.  (`Round` stores all of the game information for a single round.)
@@ -58,10 +54,10 @@ instance.  (`Round` stores all of the game information for a single round.)
 representing a color or number).  See `Round.get_play()` in `hanabi_classes.py`
 for more info.
 
-You'll probably want to use the information available to you from other
-players' hands, the tableau, and the discard pile to inform your AI's choices.
-This info is available in the `Round` object; see `Round.__init__`.  Note that
-player hands are stored as sub-objects of `Round`.  For example, in `Round`
- instance `r` a list of player i's cards is available as `r.h[i].cards`.
-(Don't look at your own cards unless you're despicable like `CheatingIdiot`!
-... You make me sick.)
+You'll want to use the information available to you from other players' hands,
+the tableau, the discard pile, and how many hints are available to inform your
+AI's choices.  This info is available in the `Round` object; see
+`Round.__init__()`.  Note that player hands are stored as sub-objects of
+`Round`.  For example, in `Round` instance `r` a list of player i's cards is
+available as `r.h[i].cards`.  (Don't look at your own cards unless you're
+despicable like `CheatingIdiot`!  ... You make me sick.)
