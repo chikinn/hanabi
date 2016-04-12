@@ -61,3 +61,6 @@ AI's choices.  This info is available in the `Round` object; see especially
 `Round`.  For example, in `Round` instance `r` a list of player i's cards is
 available as `r.h[i].cards`.  (Don't look at your own cards unless you're
 despicable like `CheatingIdiot`!  ... You make me sick.)
+
+After you write your player class, add a couple lines to `hanabi_wrapper.py` so
+the framework can detect it.  The sections you need to edit are marked `TODO:`.
