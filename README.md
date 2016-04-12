@@ -56,7 +56,7 @@ for more info.
 
 You'll want to use the information available to you from other players' hands,
 the tableau, the discard pile, and how many hints are available to inform your
-AI's choices.  This info is available in the `Round` object; see
+AI's choices.  This info is available in the `Round` object; see especially
 `Round.__init__()`.  Note that player hands are stored as sub-objects of
 `Round`.  For example, in `Round` instance `r` a list of player i's cards is
 available as `r.h[i].cards`.  (Don't look at your own cards unless you're

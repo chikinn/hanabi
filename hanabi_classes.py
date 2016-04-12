@@ -1,17 +1,13 @@
-"""Low-level classes and functions for tracking state of a Hanabi round.
+"""Low-level classes for tracking state of a Hanabi round.
 
 Intended to be imported by a higher-level game manager (play_hanabi).  The meat
 of this file is the Round class, which stores all of the game info, along with 
 the nested Hand class, which stores player-specific info.
 
-Some methods and especially the top-level functions may be useful in building
-AI players.
-
 Common attributes/arguments:
-  bid (int/bool): a bid (int > 17) or indication of OK (True) or pass (false).
   card (dict): Representation of a card.  Includes when the card was drawn and 
     all associated hint info.  See Hand class for details.
-  names (list of str): How to identify the players in printed output.
+  names (list of str): How players are identified in printed output.
 """
 
 import random

@@ -12,6 +12,7 @@ import sys
 from scipy import stats, mean
 from play_hanabi import play_one_round
 from cheating_idiot_player import CheatingIdiotPlayer
+### TODO: IMPORT YOUR PLAYER HERE
 
 def usage():
     """Print a standard Unix usage string."""
@@ -32,6 +33,10 @@ players = []
 for i in range(len(rawNames)):
     if rawNames[i] == 'cheater':
         players.append(CheatingIdiotPlayer())
+    ### TODO: YOUR NEW PLAYER NAME GOES HERE
+    # elif rawNames[i] == 'yourDumbName':
+    #     players.append(YourDumbPlayer())
+    ###
     rawNames[i] = rawNames[i].capitalize()
 
 # Resolve duplicate names by appending '1', '2', etc. as needed.
