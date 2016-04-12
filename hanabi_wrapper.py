@@ -54,7 +54,6 @@ for i in range(len(names)):
         names[i] += ' '
 
 nRounds = int(sys.argv[-2])
-
 verbosity = sys.argv[-1]
 
 # Play rounds.
@@ -64,6 +63,8 @@ for i in range(nRounds):
         print('\n' + 'ROUND {}:'.format(i))
     score = play_one_round(players, names, verbosity)
     scores.append(score)
+    if verbosity != 'silent':
+        print('Score: ' + str(score))
 
 # Print average scores.
 if verbosity != 'silent':
