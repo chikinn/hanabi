@@ -99,6 +99,7 @@ class Round:
         """Retrieve and execute AI p's play for whoever's turn it is."""
         play = playType, playValue = p.play(self)
         self.playHistory.append(play)
+        hand = self.h[self.whoseTurn]
 
         if playType == 'hint':
             assert self.hints != 0
@@ -114,7 +115,6 @@ class Round:
 
         else:
             card = playValue
-            hand = self.h[self.whoseTurn]
             assert card in hand.cards
 
             description = card['name']
