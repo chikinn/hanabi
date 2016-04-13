@@ -2,8 +2,8 @@
 """Wrapper for playing more than one round of Hanabi.
 
 Command-line arguments (see usage):
-  playeri: Name of the AI that will control each player (currently only one
-    option, 'cheater')
+  playeri: Name of the AI that will control each player (currently only two
+    options, 'cheater' and 'basic')
   nRounds: Number of rounds to play
   verbosity: How much output to show ('silent', only final average scores;
     'scores', result of each round; 'verbose', play by play)
@@ -20,7 +20,7 @@ def usage():
     """Print a standard Unix usage string."""
     print('usage: {} player1 player2 [player3 ...] n_rounds verbosity'
           .format(sys.argv[0]))
-    print('  playeri: cheater')
+    print('  playeri: cheater or basic')
     print('  n_rounds: positive integer')
     print('  verbosity: silent, scores, or verbose')
     sys.exit(2)
