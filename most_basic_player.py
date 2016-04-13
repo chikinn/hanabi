@@ -10,13 +10,13 @@ Basic players can only handle rainbow as an ordinary 6th suit.
 from hanabi_classes import *
 
 class MostBasicPlayer:
-    def get_my_playable(self, cards, progress):
+    def get_my_playable(self, suits, cards, progress):
         playableCards = []
         for card in cards:
             suit = ''
             value = ''
             for info in card['direct']: # Basic players only use direct info
-                if info in 'rygbw?':  #TODO: use constants
+                if info in suits:
                     suit = info
                 elif info in '12345':
                     value = info
@@ -37,7 +37,7 @@ class MostBasicPlayer:
         # check my knowledge about my cards, are any playable?
         cards = r.h[r.whoseTurn].cards # don't look!
         progress = r.progress
-        myPlayableCards = self.get_my_playable(cards, progress)
+        myPlayableCards = self.get_my_playable(r.suits, cards, progress)
 
         if myPlayableCards != []:
             return 'play', random.choice(myPlayableCards)

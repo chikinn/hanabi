@@ -7,9 +7,9 @@ in another module (hanabi_classes).
 
 from hanabi_classes import *
 
-def play_one_round(players, names, verbosity):
+def play_one_round(gameType, players, names, verbosity):
     """Play a full round and return the score (int)."""
-    r = Round(names, verbosity) # Instance of a single round of Hanabi
+    r = Round(gameType, names, verbosity) # Instance of a single Hanabi round
     r.generate_deck_and_deal_hands()
     
     while r.gameOverTimer != 0:
@@ -22,7 +22,7 @@ def play_one_round(players, names, verbosity):
             break # End round early if already won.
 
         if r.lightning == N_LIGHTNING:
-            return 0 # Award no points for a loss.
+            return 0 # Award no points for a loss.  TODO: togglable behavior?
 
         r.get_play(players[r.whoseTurn]) # Play one turn.
 

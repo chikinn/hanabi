@@ -2,19 +2,20 @@
 #### By Robert B. Kaspar
 
 ## Usage
-    usage: ./hanabi_wrapper.py player1 player2 [player3 ...] n_rounds verbosity
-      playeri: cheater
-      n_rounds: positive integer
+    usage: ./hanabi_wrapper.py p1 p2 [player3 ...] game_type n_rounds verbosity
+      pi (AI for player i): cheater or basic
+      game_type: rainbow, purple, or vanilla
+      n_rounds: positive int
       verbosity: silent, scores, or verbose
 
 There is no maximum number of players.  With more than 5, the hand size is
 still 4 cards.
 
 ## Example usage
-    $ ./hanabi_wrapper.py cheater cheater 1000 silent
+    $ ./hanabi_wrapper.py cheater cheater purple 1000 silent
 or
 
-    $ ./hanabi_wrapper.py cheater cheater cheater cheater 3 verbose
+    $ ./hanabi_wrapper.py cheater cheater cheater cheater rainbow 3 verbose
 
 ## Example output
     AVERAGE SCORE (+/- 1 std. err.): 23.54 +/- 0.09

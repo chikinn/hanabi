@@ -4,7 +4,9 @@
 Command-line arguments (see usage):
   playeri: Name of the AI that will control each player (currently only two
     options, 'cheater' and 'basic')
-  nRounds: Number of rounds to play
+  game_type: Whether to include the rainbow cards at all, and if so, whether
+    they're just another regular suit (effectively purple)
+  n_rounds: Number of rounds to play
   verbosity: How much output to show ('silent', only final average scores;
     'scores', result of each round; 'verbose', play by play)
 """
@@ -18,22 +20,29 @@ from most_basic_player import MostBasicPlayer
 
 def usage():
     """Print a standard Unix usage string."""
-    print('usage: {} player1 player2 [player3 ...] n_rounds verbosity'
+    print('usage: {} p1 p2 [p3 ...] game_type n_rounds verbosity'
           .format(sys.argv[0]))
-    print('  playeri: cheater or basic')
-    print('  n_rounds: positive integer')
+    print('  pi (AI for player i): cheater or basic')
+    print('  game_type: rainbow, purple, or vanilla')
+    print('  n_rounds: positive int')
     print('  verbosity: silent, scores, or verbose')
     sys.exit(2)
 
 
-if len(sys.argv) < 5:
+if len(sys.argv) < 6:
     usage()
 
+gameType = sys.argv[-3]
+assert gameType in ('rainbow', 'purple', 'vanilla')
+
 nRounds = int(sys.argv[-2])
+assert nRounds > 0
+
 verbosity = sys.argv[-1]
+assert verbosity in ('silent', 'scores', 'verbose')
 
 # Load players.
-rawNames = sys.argv[1:-2]
+rawNames = sys.argv[1:-3]
 players = []
 for i in range(len(rawNames)):
     if rawNames[i] == 'cheater':
@@ -44,6 +53,9 @@ for i in range(len(rawNames)):
     # elif rawNames[i] == 'yourDumbName':
     #     players.append(YourDumbPlayer())
     ###
+    else:
+        raise Exception('Unrecognized player type')
+
     rawNames[i] = rawNames[i].capitalize()
 
 # Resolve duplicate names by appending '1', '2', etc. as needed.
@@ -70,7 +82,7 @@ scores = []
 for i in range(nRounds):
     if verbosity == 'verbose':
         print('\n' + 'ROUND {}:'.format(i))
-    score = play_one_round(players, names, verbosity)
+    score = play_one_round(gameType, players, names, verbosity)
     scores.append(score)
     if verbosity != 'silent':
         print('Score: ' + str(score))

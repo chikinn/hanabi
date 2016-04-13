@@ -13,7 +13,7 @@ Common attributes/arguments:
 import random
 from copy import deepcopy
 
-SUITS         = 'rygbw?' # "?" stands for rainbow.
+VANILLA_SUITS = 'rygbw'
 SUIT_CONTENTS = '1112233445'
 N_HINTS       = 8
 N_LIGHTNING   = 3
@@ -29,6 +29,8 @@ class Round:
 
     The only method that interacts with AIs is 'get_play'.
 
+    gameType (str): How to treat rainbows ('rainbow', 'purple', 'vanlla').
+    suits (str): Which suits are included for this game type.
     nPlayers (int)
     h (list of obj): One Hand per player.  Don't look at your hand!
     whoseTurn (int): ID of current player, between 0 and nPlayers - 1.
@@ -45,15 +47,22 @@ class Round:
     deck (list of str)
     """
 
-    def __init__(self, names, verbosity):
+    def __init__(self, gameType, names, verbosity):
         """Instantiate a Round and its Hand sub-objects."""
+        self.gameType  = gameType
+        self.suits = VANILLA_SUITS
+        if gameType == 'rainbow':
+            self.suits += '?'
+        elif gameType == 'purple':
+            self.suits += 'p'
+
         self.nPlayers = len(names)
         self.h = [self.Hand(i, names[i]) for i in range(self.nPlayers)]
 
         self.whoseTurn     = 0
         self.turnNumber    = 0
         self.playHistory   = []
-        self.progress      = {suit : 0 for suit in SUITS}
+        self.progress      = {suit : 0 for suit in self.suits}
         self.gameOverTimer = None
         self.hints         = N_HINTS
         self.lightning     = 0
@@ -64,7 +73,7 @@ class Round:
     def generate_deck_and_deal_hands(self):
         """Construct a deck, shuffle, and deal."""
         deck = []
-        for suit in SUITS:
+        for suit in self.suits:
             for number in SUIT_CONTENTS:
                 deck.append(number + suit)
 
@@ -106,10 +115,13 @@ class Round:
             targetPlayer, info = playValue
             targetHand = self.h[targetPlayer]
             for card in targetHand.cards:
-                if info in card['name']: # Card matches hint.
-                    card['direct'].append(info)
-                else: # Card does not match hint.
-                    card['indirect'].append(info)
+                suit = card['name'][1]
+                if suit == '?' and info in VANILLA_SUITS:
+                    card['direct'].append(info) # Rainbows match any color.
+                elif info in card['name']: 
+                    card['direct'].append(info) # Card matches hint.
+                else: 
+                    card['indirect'].append(info) # Card does not match hint.
             self.hints -= 1
             description = '{} to {}'.format(info, self.h[targetPlayer].name)
 
