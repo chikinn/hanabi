@@ -3,7 +3,7 @@
 
 ## Usage
     usage: ./hanabi_wrapper.py player1 player2 [player3 ...] n_rounds verbosity
-      playeri: cheater
+      playeri: cheater or basic
       n_rounds: positive integer
       verbosity: silent, scores, or verbose
 
