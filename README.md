@@ -41,8 +41,8 @@ or
     Score: 28 
 
 ## How to write your own AI player
-`CheatingIdiot` is the only one I've made so far.  Use it as a guide.  
-Additionally, Ben Zax has contributed a `MostBasic` player.
+`CheatingIdiot` is the only one I've made so far.  Use it as a guide.  Ben Zax
+has also contributed a more respectable `MostBasic` player.
 
 Just make a player class with a `play` method whose only argument is a `Round`
 instance.  (`Round` stores all of the game information for a single round.)
