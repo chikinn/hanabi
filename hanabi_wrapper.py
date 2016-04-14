@@ -90,6 +90,7 @@ for i in range(nRounds):
 # Print average scores.
 if verbosity != 'silent':
     print('')
-# stat.sem() throws a warning if nRounds is small.  No big deal.
-print('AVERAGE SCORE (+/- 1 std. err.): {} +/- {}'\
-        .format(str(mean(scores))[:5], str(stats.sem(scores))[:4]))
+# Only print summary statistics if there were multiple rounds
+if len(scores) > 1:
+    print('AVERAGE SCORE (+/- 1 std. err.): {} +/- {}'\
+                .format(str(mean(scores))[:5], str(stats.sem(scores))[:4]))
