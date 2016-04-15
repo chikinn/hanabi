@@ -16,13 +16,14 @@ from scipy import stats, mean
 from play_hanabi import play_one_round
 from cheating_idiot_player import CheatingIdiotPlayer
 from most_basic_player import MostBasicPlayer
+from basic_rainbow import BasicRainbowPlayer
 ### TODO: IMPORT YOUR PLAYER HERE
 
 def usage():
     """Print a standard Unix usage string."""
     print('usage: {} p1 p2 [p3 ...] game_type n_rounds verbosity'
           .format(sys.argv[0]))
-    print('  pi (AI for player i): cheater or basic')
+    print('  pi (AI for player i): cheater, basic, or brainbow')
     print('  game_type: rainbow, purple, or vanilla')
     print('  n_rounds: positive int')
     print('  verbosity: silent, scores, or verbose')
@@ -49,6 +50,8 @@ for i in range(len(rawNames)):
         players.append(CheatingIdiotPlayer())
     elif rawNames[i] == 'basic':
         players.append(MostBasicPlayer())
+    elif rawNames[i] == 'brainbow':
+        players.append(BasicRainbowPlayer())
     ### TODO: YOUR NEW PLAYER NAME GOES HERE
     # elif rawNames[i] == 'yourDumbName':
     #     players.append(YourDumbPlayer())
