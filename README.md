@@ -3,7 +3,7 @@
 
 ## Usage
     usage: ./hanabi_wrapper.py p1 p2 [player3 ...] game_type n_rounds verbosity
-      pi (AI for player i): cheater or basic
+      pi (AI for player i): cheater, basic, or brainbow
       game_type: rainbow, purple, or vanilla
       n_rounds: positive int
       verbosity: silent, scores, or verbose
@@ -30,10 +30,6 @@ or
             Cheater2 discards 2b
             Cheater3 plays 1b
             Cheater4 plays 1r
-            Cheater1 plays 2r
-            Cheater2 plays 3r
-            Cheater3 plays 1g
-            Cheater4 plays 2b
             ...
             Cheater1 discards 3r
             Cheater2 discards 1?

@@ -2,8 +2,7 @@
 """Wrapper for playing more than one round of Hanabi.
 
 Command-line arguments (see usage):
-  playeri: Name of the AI that will control each player (currently only two
-    options, 'cheater' and 'basic')
+  playeri: Name of the AI that will control each player
   game_type: Whether to include the rainbow cards at all, and if so, whether
     they're just another regular suit (effectively purple)
   n_rounds: Number of rounds to play
@@ -93,7 +92,6 @@ for i in range(nRounds):
 # Print average scores.
 if verbosity != 'silent':
     print('')
-# Only print summary statistics if there were multiple rounds
-if len(scores) > 1:
+if len(scores) > 1: # Only print stats if there were multiple rounds.
     print('AVERAGE SCORE (+/- 1 std. err.): {} +/- {}'\
                 .format(str(mean(scores))[:5], str(stats.sem(scores))[:4]))
