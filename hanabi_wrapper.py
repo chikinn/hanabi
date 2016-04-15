@@ -16,7 +16,7 @@ from scipy import stats, mean
 from play_hanabi import play_one_round
 from cheating_idiot_player import CheatingIdiotPlayer
 from most_basic_player import MostBasicPlayer
-from basic_rainbow import BasicRainbowPlayer
+from basic_rainbow_player import BasicRainbowPlayer
 ### TODO: IMPORT YOUR PLAYER HERE
 
 def usage():
