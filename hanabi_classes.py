@@ -12,6 +12,7 @@ Common attributes/arguments:
 from __future__ import print_function # Corrects display for Python 2.x
 
 import random
+import logging
 from copy import deepcopy
 
 VANILLA_SUITS = 'rygbw'
@@ -71,6 +72,12 @@ class Round:
         self.verbosity = verbosity
         self.zazz = ['[HANDS]', '[PLAYS]']
 
+        self.logger = logging.getLogger('game_log')
+        self.logger.setLevel(logging.DEBUG)
+        self.ch = logging.StreamHandler() # TODO: enable file logging flag
+        self.ch.setLevel(logging.INFO)
+        self.logger.addHandler(self.ch)
+
     def generate_deck_and_deal_hands(self):
         """Construct a deck, shuffle, and deal."""
         deck = []
@@ -90,7 +97,7 @@ class Round:
             for j in range(handSize):
                 self.h[i].add(self.draw(), self.turnNumber - j)
             if self.verbosity == 'verbose':
-                self.h[i].show(self.zazz[0])
+                self.h[i].show(self.zazz[0], self.logger)
                 self.zazz[0] = ' ' * len(self.zazz[0])
 
     def draw(self):
@@ -111,7 +118,6 @@ class Round:
         self.playHistory.append(play)
         hand = self.h[self.whoseTurn]
         verboseHandAtStart = ' '.join([card['name'] for card in hand.cards])
-
         if playType == 'hint':
             assert self.hints != 0
             targetPlayer, info = playValue
@@ -137,13 +143,15 @@ class Round:
                 self.replace_card(card, hand)
                 self.hints = min(self.hints + 1, N_HINTS)
                 if self.deck != []:
-                    description += ' and draws {}'.format(hand.cards[-1]['name'])
+                    description += ' and draws {}'\
+                                    .format(hand.cards[-1]['name'])
 
             elif playType == 'play':
                 value, suit = card['name']
                 self.replace_card(card, hand)
                 if self.deck != []:
-                    description += ' and draws {}'.format(hand.cards[-1]['name'])
+                    description += ' and draws {}'\
+                                    .format(hand.cards[-1]['name'])
                 if self.progress[suit] == int(value) - 1: # Legal play
                     self.progress[suit] += 1
                     if value == '5':
@@ -156,8 +164,9 @@ class Round:
         self.turnNumber += 1
 
         if self.verbosity == 'verbose':
-            print(self.zazz[1], '{} [{}] {}s {}'\
-                    .format(hand.name, verboseHandAtStart, playType, description))
+            self.logger.info(self.zazz[1] + ' {} [{}] {}s {}'\
+                    .format(hand.name, verboseHandAtStart,
+                            playType, description))
             self.zazz[1] = ' ' * len(self.zazz[1])
 
 
@@ -180,10 +189,10 @@ class Round:
             self.seat = seat
             self.name = name
 
-        def show(self, zazz):
+        def show(self, zazz, logger):
             """Print cards (verbose output only)."""
             out = [card['name'] for card in self.cards]
-            print(zazz, self.name + ':', ' '.join(out))
+            logger.info(zazz + ' ' + self.name + ': ' + ' '.join(out))
 
         def add(self, newCard, turnNumber):
             """Add a card to the hand."""
