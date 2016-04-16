@@ -42,7 +42,7 @@ class NewestCardPlayer:
         if hinted:
             return max(hinted, key=lambda card: card['time'])
 
-    # find the newest card in another player's hand which info targets 
+    # find the newest card in another player's hand which info targets
     def get_newest_hinted(self, cards, info):
         hinted = [card for card in cards if info in card['name']
                 or (info in 'rygbw' and '?' in card['name'])]
@@ -59,7 +59,6 @@ class NewestCardPlayer:
     # smarter players might not discard known fives...
     def get_discard(self, cards):
         return min(cards, key=lambda card: card['time'])
-        
 
     def play(self, r):
         me = r.whoseTurn
