@@ -39,9 +39,9 @@ or
 
 ## Available players
 * **Cheating Idiot** (`cheater`) by RK  
-  Peeks at own hand, plays playable cards, discards randomly, never hints
+  Peeks at own hand to know when to play, discards randomly, never hints
 * **Most Basic** (`basic`) by Ben Zax  
-  Plays playable cards, discards randomly, hints plays, vanilla/purple only
+  Plays when certain, discards randomly, hints inefficiently, no rainbows
 * **Basic Rainbow** (`brainbow`) by Greg Hutchings  
   Like `basic` but checks direct and indirect info to handle rainbows
 * **Newest Card** (`newest`) by BZ  
