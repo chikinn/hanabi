@@ -137,13 +137,15 @@ class Round:
                 self.replace_card(card, hand)
                 self.hints = min(self.hints + 1, N_HINTS)
                 if self.deck != []:
-                    description += ' and draws {}'.format(hand.cards[-1]['name'])
+                    description += ' and draws {}'\
+                                    .format(hand.cards[-1]['name'])
 
             elif playType == 'play':
                 value, suit = card['name']
                 self.replace_card(card, hand)
                 if self.deck != []:
-                    description += ' and draws {}'.format(hand.cards[-1]['name'])
+                    description += ' and draws {}'\
+                                    .format(hand.cards[-1]['name'])
                 if self.progress[suit] == int(value) - 1: # Legal play
                     self.progress[suit] += 1
                     if value == '5':
@@ -157,7 +159,8 @@ class Round:
 
         if self.verbosity == 'verbose':
             print(self.zazz[1], '{} [{}] {}s {}'\
-                    .format(hand.name, verboseHandAtStart, playType, description))
+                    .format(hand.name, verboseHandAtStart,
+                            playType, description))
             self.zazz[1] = ' ' * len(self.zazz[1])
 
 
