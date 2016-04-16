@@ -1,15 +1,15 @@
 # Hanabi
-#### By Robert B. Kaspar
+#### Robert B. Kaspar, rbkaspar@gmail.com
 
 ## Usage
     usage: ./hanabi_wrapper.py p1 p2 [player3 ...] game_type n_rounds verbosity
-      pi (AI for player i): cheater or basic
+      pi (AI for player i): cheater, basic, or brainbow
       game_type: rainbow, purple, or vanilla
       n_rounds: positive int
       verbosity: silent, scores, or verbose
 
-There is no maximum number of players.  With more than 5, the hand size is
-still 4 cards.
+There is no max number of players.  With more than 5, the hand size is still 4
+cards.
 
 ## Example usage
     $ ./hanabi_wrapper.py cheater cheater purple 1000 silent
@@ -30,10 +30,6 @@ or
             Cheater2 discards 2b
             Cheater3 plays 1b
             Cheater4 plays 1r
-            Cheater1 plays 2r
-            Cheater2 plays 3r
-            Cheater3 plays 1g
-            Cheater4 plays 2b
             ...
             Cheater1 discards 3r
             Cheater2 discards 1?
@@ -41,9 +37,16 @@ or
             Cheater4 plays 5r
     Score: 28 
 
+## Available players
+* **Cheating Idiot** (`cheater`) by RK  
+  Peeks at own hand, plays playable cards, discards randomly, never hints
+* **Most Basic** (`basic`) by Ben Zax  
+  Plays playable cards, discards randomly, hints plays, vanilla/purple only
+* **Basic Rainbow** (`brainbow`) by Greg Hutchings  
+  Like `basic` but checks direct and indirect info to handle rainbows
+
 ## How to write your own AI player
-`CheatingIdiot` is the only one I've made so far.  Use it as a guide.  Ben Zax
-has also contributed a more respectable `MostBasic` player.
+Use an existing player as a guide.  `CheatingIdiot` is especially simple.
 
 Just make a player class with a `play` method whose only argument is a `Round`
 instance.  (`Round` stores all of the game information for a single round.)
