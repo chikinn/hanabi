@@ -2,8 +2,8 @@
 #### Robert B. Kaspar, rbkaspar@gmail.com
 
 ## Usage
-    usage: ./hanabi_wrapper.py p1 p2 [player3 ...] game_type n_rounds verbosity
-      pi (AI for player i): cheater, basic, or brainbow
+    usage: ./hanabi_wrapper.py p1 p2 [p3 ...] game_type n_rounds verbosity
+      pi (AI for player i): cheater, basic, brainbow, or newest
       game_type: rainbow, purple, or vanilla
       n_rounds: positive int
       verbosity: silent, scores, or verbose
@@ -39,11 +39,13 @@ or
 
 ## Available players
 * **Cheating Idiot** (`cheater`) by RK  
-  Peeks at own hand, plays playable cards, discards randomly, never hints
+  Peeks at own hand to know when to play, discards randomly, never hints
 * **Most Basic** (`basic`) by Ben Zax  
-  Plays playable cards, discards randomly, hints plays, vanilla/purple only
+  Plays when certain, discards randomly, hints inefficiently, no rainbows
 * **Basic Rainbow** (`brainbow`) by Greg Hutchings  
   Like `basic` but checks direct and indirect info to handle rainbows
+* **Newest Card** (`newest`) by BZ  
+  Plays newest hinted card (and hints accordingly), discards oldest card
 
 ## How to write your own AI player
 Use an existing player as a guide.  `CheatingIdiot` is especially simple.
