@@ -16,6 +16,7 @@ from play_hanabi import play_one_round
 from cheating_idiot_player import CheatingIdiotPlayer
 from most_basic_player import MostBasicPlayer
 from basic_rainbow_player import BasicRainbowPlayer
+from newest_card_player import NewestCardPlayer
 ### TODO: IMPORT YOUR PLAYER HERE
 
 def usage():
@@ -51,6 +52,8 @@ for i in range(len(rawNames)):
         players.append(MostBasicPlayer())
     elif rawNames[i] == 'brainbow':
         players.append(BasicRainbowPlayer())
+    elif rawNames[i] == 'newest':
+        players.append(NewestCardPlayer())
     ### TODO: YOUR NEW PLAYER NAME GOES HERE
     # elif rawNames[i] == 'yourDumbName':
     #     players.append(YourDumbPlayer())
