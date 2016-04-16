@@ -43,11 +43,9 @@ availablePlayers = {'cheater'  : CheatingIdiotPlayer, ### TODO: ADD YOUR PLAYER
                     'newest'   : NewestCardPlayer} 
 players = []
 rawNames = args.requiredPlayers + args.morePlayers
-for i in range(len(rawNames)): # Todo: streamline this check, incl. else.
-    if rawNames[i] in availablePlayers:
-        players.append(availablePlayers[rawNames[i]]())
-    else:
-        raise Exception('Unrecognized player type')
+for i in range(len(rawNames)):
+    assert rawNames[i] in availablePlayers
+    players.append(availablePlayers[rawNames[i]]())
     rawNames[i] = rawNames[i].capitalize()
 
 # Resolve duplicate names by appending '1', '2', etc. as needed.
