@@ -17,7 +17,7 @@ from cheating_idiot_player import CheatingIdiotPlayer
 from most_basic_player import MostBasicPlayer
 from basic_rainbow_player import BasicRainbowPlayer
 from newest_card_player import NewestCardPlayer
-### TODO: IMPORT YOUR PLAYER HERE
+### TODO: IMPORT YOUR PLAYER
 
 # Parse command-line args.
 parser = argparse.ArgumentParser(description='Process some integers.')
@@ -37,21 +37,17 @@ assert args.nRounds > 0
 assert args.verbosity in ('silent', 'scores', 'verbose')
 
 # Load players.
-rawNames = args.requiredPlayers + args.morePlayers
+availablePlayers = {'cheater'  : CheatingIdiotPlayer, ### TODO: ADD YOUR PLAYER
+                    'basic'    : MostBasicPlayer,
+                    'brainbow' : BasicRainbowPlayer,
+                    'newest'   : NewestCardPlayer} 
 players = []
+rawNames = args.requiredPlayers + args.morePlayers
 for i in range(len(rawNames)): # Todo: streamline this check, incl. else.
-    if rawNames[i] == 'cheater':
-        players.append(CheatingIdiotPlayer())
-    elif rawNames[i] == 'basic':
-        players.append(MostBasicPlayer())
-    elif rawNames[i] == 'brainbow':
-        players.append(BasicRainbowPlayer())
-    elif rawNames[i] == 'newest':
-        players.append(NewestCardPlayer())
-    ### TODO: YOUR NEW PLAYER NAME GOES HERE
+    if rawNames[i] in availablePlayers:
+        players.append(availablePlayers[rawNames[i]]())
     else:
         raise Exception('Unrecognized player type')
-
     rawNames[i] = rawNames[i].capitalize()
 
 # Resolve duplicate names by appending '1', '2', etc. as needed.
