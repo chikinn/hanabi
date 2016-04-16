@@ -87,8 +87,8 @@ class Round:
         if self.nPlayers < 4:
             handSize += 1
         for i in range(self.nPlayers): # Deal cards to all players.
-            for _ in range(handSize):
-                self.h[i].add(self.draw(), self.turnNumber)
+            for j in range(handSize):
+                self.h[i].add(self.draw(), self.turnNumber - j)
             if self.verbosity == 'verbose':
                 self.h[i].show(self.zazz[0])
                 self.zazz[0] = ' ' * len(self.zazz[0])
