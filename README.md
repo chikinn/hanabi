@@ -6,7 +6,7 @@
       pi (AI for player i): cheater, basic, brainbow, or newest
       game_type: rainbow, purple, or vanilla
       n_rounds: positive int
-      verbosity: silent, scores, or verbose
+      verbosity: silent, scores, verbose, or log
 
 There is no max number of players.  With more than 5, the hand size is still 4
 cards.
