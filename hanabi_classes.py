@@ -43,7 +43,10 @@ class Round:
     hints (int): Higher is better.
     lightning (int): Higher is worse.  A.K.A. fuse.
     verbosity (str): How much to print ('silent', 'scores', or 'verbose').
+    verbose (bool): True if verbosity in 'verbose' or 'log'
+    log (bool): True if logging to file (more detail should appear)
     zazz (list of str): Schnazzy labeled indents for verbose output.
+    logger (logging object): game state log, created in the wrapper
     cardsLeft (list of str): Cards that not all players have seen yet.
     deck (list of str)
     """
@@ -69,9 +72,18 @@ class Round:
         self.lightning     = 0
 
         self.verbosity = verbosity
+        self.verbose = (verbosity in ('verbose', 'log'))
+        self.log = (verbosity == 'log')
         self.zazz = ['[HANDS]', '[PLAYS]']
 
         self.logger = logging.getLogger('game_log')
+        if not len(self.logger.handlers):
+            # Define logging handlers if not defined by wrapper script
+            # Will only happen a single time, even for multiple games
+            ch = logging.FileHandler('games.log') if self.log \
+                                            else logging.StreamHandler()
+            ch.setLevel(logging.INFO)
+            self.logger.addHandler(ch)
 
     def generate_deck_and_deal_hands(self):
         """Construct a deck, shuffle, and deal."""
@@ -91,7 +103,7 @@ class Round:
         for i in range(self.nPlayers): # Deal cards to all players.
             for j in range(handSize):
                 self.h[i].add(self.draw(), self.turnNumber - j)
-            if self.verbosity == 'verbose':
+            if self.verbose:
                 self.h[i].show(self.zazz[0], self.logger)
                 self.zazz[0] = ' ' * len(self.zazz[0])
 
@@ -107,11 +119,29 @@ class Round:
         if self.deck != []:
             hand.add(self.draw(), self.turnNumber)
 
+    def printAllKnowledge(self):
+        for i in range(self.nPlayers):
+            allCards = []
+            directKnowledge = []
+            indirectKnowledge = []
+            for card in self.h[i].cards:
+                allCards.append(card['name'])
+                directKnowledge.append(''.join(card['direct']))
+                indirectKnowledge.append(''.join(card['indirect']))
+            self.logger.info(' ' * len(self.zazz[1]) * 2 +
+                        " {} [{}] knows ['{}'] and not ['{}']"\
+                        .format(self.h[i].name, ' '.join(allCards),
+                        "' '".join(directKnowledge),
+                        "' '".join(indirectKnowledge)))
+
     def get_play(self, p):
         """Retrieve and execute AI p's play for whoever's turn it is."""
+        if self.log and self.turnNumber != 0: self.printAllKnowledge()
+
         play = playType, playValue = p.play(self)
         self.playHistory.append(play)
         hand = self.h[self.whoseTurn]
+
         verboseHandAtStart = ' '.join([card['name'] for card in hand.cards])
         if playType == 'hint':
             assert self.hints != 0
@@ -158,7 +188,7 @@ class Round:
         self.whoseTurn = (self.whoseTurn + 1) % self.nPlayers
         self.turnNumber += 1
 
-        if self.verbosity == 'verbose':
+        if self.verbose:
             self.logger.info(self.zazz[1] + ' {} [{}] {}s {}'\
                     .format(hand.name, verboseHandAtStart,
                             playType, description))

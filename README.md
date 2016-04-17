@@ -6,7 +6,7 @@
       pi (AI for player i): cheater, basic, brainbow, or newest
       game_type: rainbow, purple, or vanilla
       n_rounds: positive int
-      verbosity: silent, scores, or verbose
+      verbosity: silent, scores, verbose, or log
 
 There is no max number of players.  With more than 5, the hand size is still 4
 cards.
@@ -22,20 +22,24 @@ or
 or
 
     ROUND 1:
-    [HANDS] Cheater1: 3g 4w 2r 1y
-            Cheater2: 3r 2b 3w 3y
-            Cheater3: 3b 1b 1r 3?
-            Cheater4: 2b 5w 4b 1r
-    [PLAYS] Cheater1 plays 1y
-            Cheater2 discards 2b
-            Cheater3 plays 1b
-            Cheater4 plays 1r
+    [HANDS] Cheater1: 3y 1? 3w 3r
+            Cheater2: 2g 3w 3g 1r
+            Cheater3: 2? 4? 1y 2b
+            Cheater4: 1b 2r 1b 1w
+    [PLAYS] Cheater1 [3y 1? 3w 3r] plays 1? and draws 1w
+            Cheater2 [2g 3w 3g 1r] plays 1r and draws 1y
+            Cheater3 [2? 4? 1y 2b] plays 2? and draws 3y
+            Cheater4 [1b 2r 1b 1w] plays 1w and draws 3g
             ...
-            Cheater1 discards 3r
-            Cheater2 discards 1?
-            Cheater3 discards 2?
-            Cheater4 plays 5r
-    Score: 28 
+            Cheater1 [3y 1r 2w 3?] plays 3y and draws 5y
+            Cheater2 [1g 1? 1b 2b] discards 1? and draws 2?
+            Cheater3 [1y 3y 3r 4b] discards 3y and draws 2y
+            Cheater4 [1y 1g 2r 5r] plays 5r
+            Cheater1 [1r 2w 3? 5y] discards 1r
+            Cheater2 [1g 1b 2b 2?] discards 1g
+            Cheater3 [1y 3r 4b 2y] discards 2y
+            Cheater4 [1y 1g 2r 3b] discards 2r
+    Score: 26
 
 ## Available players
 * **Cheating Idiot** (`cheater`) by RK  
