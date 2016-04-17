@@ -11,6 +11,7 @@ Command-line arguments (see usage):
 """
 
 import sys, argparse
+import logging
 from scipy import stats, mean
 from play_hanabi import play_one_round
 from cheating_idiot_player import CheatingIdiotPlayer
@@ -40,7 +41,7 @@ assert args.verbosity in ('silent', 'scores', 'verbose')
 availablePlayers = {'cheater'  : CheatingIdiotPlayer, ### TODO: ADD YOUR PLAYER
                     'basic'    : MostBasicPlayer,
                     'brainbow' : BasicRainbowPlayer,
-                    'newest'   : NewestCardPlayer} 
+                    'newest'   : NewestCardPlayer}
 players = []
 rawNames = args.requiredPlayers + args.morePlayers
 for i in range(len(rawNames)):
@@ -67,19 +68,26 @@ for i in range(len(names)):
     while len(names[i]) < len(longestName):
         names[i] += ' '
 
+# Create logging object for all output
+logger = logging.getLogger('game_log')
+logger.setLevel(logging.DEBUG)
+ch = logging.StreamHandler() # TODO: enable file logging flag
+ch.setLevel(logging.INFO)
+logger.addHandler(ch)
+
 # Play rounds.
 scores = []
 for i in range(args.nRounds):
     if args.verbosity == 'verbose':
-        print('\n' + 'ROUND {}:'.format(i))
+        logger.info('\n' + 'ROUND {}:'.format(i))
     score = play_one_round(args.gameType, players, names, args.verbosity)
     scores.append(score)
     if args.verbosity != 'silent':
-        print('Score: ' + str(score))
+        logger.info('Score: ' + str(score))
 
 # Print average scores.
 if args.verbosity != 'silent':
-    print('')
+    logger.info('')
 if len(scores) > 1: # Only print stats if there were multiple rounds.
-    print('AVERAGE SCORE (+/- 1 std. err.): {} +/- {}'\
+    logger.info('AVERAGE SCORE (+/- 1 std. err.): {} +/- {}'\
                 .format(str(mean(scores))[:5], str(stats.sem(scores))[:4]))
