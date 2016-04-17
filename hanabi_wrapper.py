@@ -7,7 +7,8 @@ Command-line arguments (see usage):
     they're just another regular suit (effectively purple)
   n_rounds: Number of rounds to play
   verbosity: How much output to show ('silent', only final average scores;
-    'scores', result of each round; 'verbose', play by play)
+    'scores', result of each round; 'verbose', play by play; 'logging',
+    detailed log file for the gamestate at each play)
 """
 
 import sys, argparse
@@ -20,28 +21,30 @@ from basic_rainbow_player import BasicRainbowPlayer
 from newest_card_player import NewestCardPlayer
 ### TODO: IMPORT YOUR PLAYER
 
+# Define all available players
+availablePlayers = {'cheater'  : CheatingIdiotPlayer, ### TODO: ADD YOUR PLAYER
+                    'basic'    : MostBasicPlayer,
+                    'brainbow' : BasicRainbowPlayer,
+                    'newest'   : NewestCardPlayer}
+
 # Parse command-line args.
 parser = argparse.ArgumentParser(description='Process some integers.')
 parser.add_argument('requiredPlayers', metavar='p', type=str, nargs=2,
-                    help='cheater, basic, or brainbow')
+                    help=', '.join(availablePlayers.keys()))
 parser.add_argument('morePlayers', metavar='p', type=str, nargs='*')
 parser.add_argument('gameType', metavar='game_type', type=str,
                     help='rainbow, purple, or vanilla')
 parser.add_argument('nRounds', metavar='n_rounds', type=int,
                     help='positive int')
 parser.add_argument('verbosity', metavar='verbosity', type=str,
-                    help='silent, scores, or verbose')
+                    help='silent, scores, verbose, or logging')
 args = parser.parse_args()
 
 assert args.gameType in ('rainbow', 'purple', 'vanilla')
 assert args.nRounds > 0
-assert args.verbosity in ('silent', 'scores', 'verbose')
+assert args.verbosity in ('silent', 'scores', 'verbose', 'logging')
 
 # Load players.
-availablePlayers = {'cheater'  : CheatingIdiotPlayer, ### TODO: ADD YOUR PLAYER
-                    'basic'    : MostBasicPlayer,
-                    'brainbow' : BasicRainbowPlayer,
-                    'newest'   : NewestCardPlayer}
 players = []
 rawNames = args.requiredPlayers + args.morePlayers
 for i in range(len(rawNames)):
@@ -71,14 +74,15 @@ for i in range(len(names)):
 # Create logging object for all output
 logger = logging.getLogger('game_log')
 logger.setLevel(logging.DEBUG)
-ch = logging.StreamHandler() # TODO: enable file logging flag
+ch = logging.FileHandler('games.log') if args.verbosity == 'logging'\
+                                else logging.StreamHandler()
 ch.setLevel(logging.INFO)
 logger.addHandler(ch)
 
 # Play rounds.
 scores = []
 for i in range(args.nRounds):
-    if args.verbosity == 'verbose':
+    if args.verbosity == ('verbose' or 'logging'):
         logger.info('\n' + 'ROUND {}:'.format(i))
     score = play_one_round(args.gameType, players, names, args.verbosity)
     scores.append(score)
