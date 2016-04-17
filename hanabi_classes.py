@@ -9,7 +9,6 @@ Common attributes/arguments:
     all associated hint info.  See Hand class for details.
   names (list of str): How players are identified in printed output.
 """
-from __future__ import print_function # Corrects display for Python 2.x
 
 import random
 import logging
@@ -73,10 +72,6 @@ class Round:
         self.zazz = ['[HANDS]', '[PLAYS]']
 
         self.logger = logging.getLogger('game_log')
-        self.logger.setLevel(logging.DEBUG)
-        self.ch = logging.StreamHandler() # TODO: enable file logging flag
-        self.ch.setLevel(logging.INFO)
-        self.logger.addHandler(self.ch)
 
     def generate_deck_and_deal_hands(self):
         """Construct a deck, shuffle, and deal."""
