@@ -83,7 +83,7 @@ class NewestCardPlayer:
  
         if r.hints > 0:
             # look around at each other hand to see if anything is playable
-            for i in range(me+1, r.nPlayers) + range(0, me):
+            for i in list(range(me+1, r.nPlayers)) + list(range(0, me)):
                 othersCards = r.h[i].cards
                 playableCards = self.get_playable(othersCards, progress)
 

@@ -34,7 +34,7 @@ or
             Cheater1 [3y 1r 2w 3?] plays 3y and draws 5y
             Cheater2 [1g 1? 1b 2b] discards 1? and draws 2?
             Cheater3 [1y 3y 3r 4b] discards 3y and draws 2y
-            Cheater4 [1y 1g 2r 5r] plays 5r
+            Cheater4 [1y 1g 2r 5r] plays 5r and draws 3b
             Cheater1 [1r 2w 3? 5y] discards 1r
             Cheater2 [1g 1b 2b 2?] discards 1g
             Cheater3 [1y 3r 4b 2y] discards 2y
