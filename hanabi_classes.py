@@ -111,6 +111,8 @@ class Round:
         """Remove and return the top card of the deck."""
         return self.deck.pop(0)
 
+    # Discards card from hand, then attempts to draw a new card.
+    # Returns true if there was still a card to draw.
     def replace_card(self, card, hand):
         """Drop the card, draw a new one, and update public info."""
         if not card['known']:
@@ -118,6 +120,8 @@ class Round:
         hand.drop(card)
         if self.deck != []:
             hand.add(self.draw(), self.turnNumber)
+            return True
+        return False
 
     def printAllKnowledge(self):
         for i in range(self.nPlayers):
@@ -165,16 +169,14 @@ class Round:
             description = card['name']
 
             if playType == 'discard':
-                self.replace_card(card, hand)
-                self.hints = min(self.hints + 1, N_HINTS)
-                if self.deck != []:
+                if self.replace_card(card, hand):
                     description += ' and draws {}'\
                                     .format(hand.cards[-1]['name'])
+                self.hints = min(self.hints + 1, N_HINTS)
 
             elif playType == 'play':
                 value, suit = card['name']
-                self.replace_card(card, hand)
-                if self.deck != []:
+                if self.replace_card(card, hand):
                     description += ' and draws {}'\
                                     .format(hand.cards[-1]['name'])
                 if self.progress[suit] == int(value) - 1: # Legal play
