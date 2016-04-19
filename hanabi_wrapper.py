@@ -9,6 +9,7 @@ Command-line arguments (see usage):
   verbosity: How much output to show ('silent', only final average scores;
     'scores', result of each round; 'verbose', play by play; 'log',
     detailed log file for the gamestate at each play)
+  loss_score: Whether to award points after a game is lost
 """
 
 import sys, argparse, logging
