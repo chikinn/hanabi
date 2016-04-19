@@ -20,6 +20,7 @@ from cheating_idiot_player import CheatingIdiotPlayer
 from most_basic_player import MostBasicPlayer
 from basic_rainbow_player import BasicRainbowPlayer
 from newest_card_player import NewestCardPlayer
+from human_player import HumanPlayer
 ### TODO: IMPORT YOUR PLAYER
 
 # Define all available players
@@ -27,7 +28,8 @@ from newest_card_player import NewestCardPlayer
 availablePlayers = {'cheater'  : CheatingIdiotPlayer,
                     'basic'    : MostBasicPlayer,
                     'brainbow' : BasicRainbowPlayer,
-                    'newest'   : NewestCardPlayer}
+                    'newest'   : NewestCardPlayer,
+                    'human'    : HumanPlayer}
 
 # Parse command-line args.
 parser = argparse.ArgumentParser(description='Process some integers.')
