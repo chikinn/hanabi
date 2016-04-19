@@ -5,20 +5,13 @@ picks one randomly.  When he doesn't, he discards randomly.
 """
 
 from hanabi_classes import *
+from bot_utils import get_plays
 
 class CheatingIdiotPlayer:
-    def get_playable(self, cards, progress):
-        playableCards = []
-        for card in cards:
-            value, suit = card['name']
-            if progress[suit] == int(value) - 1:
-                playableCards.append(card)
-        return playableCards
-
     def play(self, r):
         cards = r.h[r.whoseTurn].cards
         progress = r.progress
-        playableCards = self.get_playable(cards, progress)
+        playableCards = get_plays(cards, progress)
 
         if playableCards == []:
             return 'discard', random.choice(cards)
