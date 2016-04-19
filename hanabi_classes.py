@@ -19,12 +19,6 @@ SUIT_CONTENTS = '1112233445'
 N_HINTS       = 8
 N_LIGHTNING   = 3
 
-def example_fun(arg):
-    """Docstring
-
-    arg (list of int): Description."""
-    return arg
-
 class Round:
     """Store round info and interact with AI players.
 

@@ -9,13 +9,14 @@ Command-line arguments (see usage):
   verbosity: How much output to show ('silent', only final average scores;
     'scores', result of each round; 'verbose', play by play; 'log',
     detailed log file for the gamestate at each play)
+  loss_score: Whether to award points after a game is lost
 """
 
-import sys, argparse
-import logging
+import sys, argparse, logging
 from time import gmtime, strftime
 from scipy import stats, mean
 from play_hanabi import play_one_round
+### TODO: IMPORT YOUR PLAYER
 from cheating_idiot_player import CheatingIdiotPlayer
 from most_basic_player import MostBasicPlayer
 from basic_rainbow_player import BasicRainbowPlayer
@@ -23,8 +24,7 @@ from newest_card_player import NewestCardPlayer
 from human_player import HumanPlayer
 ### TODO: IMPORT YOUR PLAYER
 
-# Define all available players
-### TODO: ADD YOUR PLAYER
+# Define all available players.  TODO: ADD YOURS
 availablePlayers = {'cheater'  : CheatingIdiotPlayer,
                     'basic'    : MostBasicPlayer,
                     'brainbow' : BasicRainbowPlayer,
@@ -34,19 +34,22 @@ availablePlayers = {'cheater'  : CheatingIdiotPlayer,
 # Parse command-line args.
 parser = argparse.ArgumentParser(description='Process some integers.')
 parser.add_argument('requiredPlayers', metavar='p', type=str, nargs=2,
-                    help=', '.join(availablePlayers.keys()))
+  help=', '.join(availablePlayers.keys()))
 parser.add_argument('morePlayers', metavar='p', type=str, nargs='*')
-parser.add_argument('gameType', metavar='game_type', type=str,
-                    help='rainbow, purple, or vanilla')
-parser.add_argument('nRounds', metavar='n_rounds', type=int,
-                    help='positive int')
-parser.add_argument('verbosity', metavar='verbosity', type=str,
-                    help='silent, scores, verbose, or log')
+parser.add_argument('-t', '--game_type', default='rainbow',
+  metavar='game_type', type=str, help='rainbow, purple, or vanilla')
+parser.add_argument('-n', '--n_rounds', default=1, metavar='n_rounds',
+  type=int, help='positive int')
+parser.add_argument('-v', '--verbosity', default='verbose',
+  metavar='verbosity', type=str, help='silent, scores, verbose, or log')
+parser.add_argument('-l', '--loss_score', default='zero', metavar='loss_score',
+  type=str, help='zero or full')
 args = parser.parse_args()
 
-assert args.gameType in ('rainbow', 'purple', 'vanilla')
-assert args.nRounds > 0
+assert args.game_type in ('rainbow', 'purple', 'vanilla')
+assert args.n_rounds > 0
 assert args.verbosity in ('silent', 'scores', 'verbose', 'log')
+assert args.loss_score in ('zero', 'full')
 
 # Load players.
 players = []
@@ -75,7 +78,7 @@ for i in range(len(names)):
     while len(names[i]) < len(longestName):
         names[i] += ' '
 
-# Create logging object for all output
+# Create logging object for all output.
 logger = logging.getLogger('game_log')
 logger.setLevel(logging.DEBUG)
 ch = logging.FileHandler('games.log') if args.verbosity == 'log'\
@@ -87,14 +90,15 @@ if args.verbosity == 'log':
     logger.info('#'*22 + ' NEW ROUNDSET ' + '#'*22)
     logger.info('{} ROUNDSET: {} round(s) of {} Hanabi'\
                 .format(strftime("%a, %d %b %Y %H:%M:%S +0000", gmtime()),
-                args.nRounds, args.gameType))
+                args.n_rounds, args.game_type))
 
 # Play rounds.
 scores = []
-for i in range(args.nRounds):
+for i in range(args.n_rounds):
     if args.verbosity in ('verbose', 'log'):
         logger.info('\n' + 'ROUND {}:'.format(i))
-    score = play_one_round(args.gameType, players, names, args.verbosity)
+    score = play_one_round(args.game_type, players, names, args.verbosity,
+                           args.loss_score)
     scores.append(score)
     if args.verbosity != 'silent':
         logger.info('Score: ' + str(score))
