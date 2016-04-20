@@ -9,30 +9,9 @@ about to be discarded, or playing all 1s from starting round hints.
 """
 
 from hanabi_classes import *
+from bot_utils import get_plays, deduce_plays
 
 class NewestCardPlayer:
-    def get_my_playable(self, cards, progress, r):
-        playableCards = []
-        for card in cards:
-            suit = ''
-            value = ''
-            for info in card['direct']:
-                if info in r.suits:
-                    suit = info
-                elif info in '12345':
-                    value = info
-                #else something was invalid
-            if suit != '' and value != '' and progress[suit] == int(value) - 1:
-                playableCards.append(card)
-        return playableCards
-
-    def get_playable(self, cards, progress):
-        playableCards = []
-        for card in cards:
-            value, suit = card['name']
-            if progress[suit] == int(value) - 1:
-                playableCards.append(card)
-        return playableCards
 
     # find the newest card in your hand for which info was relevant
     # as long as you haven't drawn any new cards, this should have the same
@@ -76,7 +55,7 @@ class NewestCardPlayer:
                       return 'play', play
 
         # check my knowledge about my cards, are any guaranteed playable?
-        myPlayableCards = self.get_my_playable(cards, progress, r)
+        myPlayableCards = deduce_plays(cards, progress, r.suits)
 
         if myPlayableCards != []:
             return 'play', random.choice(myPlayableCards)
@@ -85,7 +64,7 @@ class NewestCardPlayer:
             # look around at each other hand to see if anything is playable
             for i in list(range(me+1, r.nPlayers)) + list(range(0, me)):
                 othersCards = r.h[i].cards
-                playableCards = self.get_playable(othersCards, progress)
+                playableCards = get_plays(othersCards, progress)
 
                 if playableCards != []:
                     for card in playableCards:
