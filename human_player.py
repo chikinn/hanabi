@@ -136,7 +136,7 @@ class HumanPlayer:
                 for key in sorted(cardOptions.keys()):
                     print(zazzIndent, key + ':', cardOptions[key])
                 choice = self.getInput(zazzIndent,
-                                 ["{}".format(x + 1) for x in range(nCards)])
+                                ["{}".format(x + 1) for x in range(nCards + 1)])
                 if int(choice) <= nCards:
                     print()
                     return playType, cards[int(choice)-1]
@@ -155,7 +155,7 @@ class HumanPlayer:
                     'Enter suit or value for the hint (or type x to go back)')
 
                 hint = self.getInput(zazzIndent,
-                                        r.suits.replace('?', '') + '12345')
+                                        r.suits.replace('?', '') + '12345x')
                 if hint != 'x':
                     return 'hint', (playerOptions[hintTarget][0], hint)
 #Nothing here.
