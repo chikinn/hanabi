@@ -3,7 +3,7 @@
 
 ## Usage
     usage: ./hanabi_wrapper.py p1 p2 [p3 ...] [-t game_type] [-n n_rounds] [-v verbosity] [-l loss_score]
-      pi (AI for player i): cheater, basic, brainbow, or newest
+      pi (AI for player i): cheater, basic, brainbow, newest, or human
       game_type: rainbow [default], purple, or vanilla
       n_rounds: positive int [default: 1]
       verbosity: verbose [default], scores, silent, or log
@@ -51,6 +51,8 @@ or
   Like `basic` but checks direct and indirect info to handle rainbows
 * **Newest Card** (`newest`) by BZ  
   Plays newest hinted card (and hints accordingly), discards oldest card
+* **Human** (`human`) by Greg Hutchings  
+  Allows you to play alongside the AIs (works best on -v silent or log)
 
 ## How to write your own AI player
 Use an existing player as a guide.  `CheatingIdiot` is especially simple.

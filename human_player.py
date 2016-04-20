@@ -8,11 +8,15 @@ for now this will do.
 
 Works best on 'silent' or 'log' (but you can run on verbose if you want to
 cheat a bit for testing).
+
+###TODO: Add showDiscards (might need addition to Rounds class?)
+
 """
 from __future__ import print_function
 # Note: use of print instead of logging is intentional - don't want the menu
 #       for the player to clutter up the game log!
 from hanabi_classes import *
+import os
 
 class HumanPlayer:
     def getInput(self, zazzIndent, validInput):
@@ -40,9 +44,15 @@ class HumanPlayer:
             print(zazzIndent, 'Card', str(i + 1), direct, indirect)
 
     def showTurns(self, zazzIndent, r):
-        i = 0
+        i = r.nPlayers - len(r.playHistory[-(r.nPlayers):])
+        if i != 0: # Happens on the first turn only
+            for playerId in range(r.nPlayers):
+                if playerId != r.whoseTurn:
+                    playerHand = [card['name'] for card in r.h[playerId].cards]
+                    print(zazzIndent, r.h[playerId].name, 'has',
+                                                        ' '.join(playerHand))
+
         for history in r.playHistory[-(r.nPlayers):]:
-            i += r.nPlayers - len(r.playHistory[-(r.nPlayers):])
             playerId = (r.whoseTurn + i) % r.nPlayers
             playerName = r.h[playerId].name
             playerHand = []
@@ -70,13 +80,18 @@ class HumanPlayer:
 
     def displayCurrentState(self, zazzIndent, r, cards):
         # First, show the plays since your last turn
-        print()
+        os.system('cls' if os.name == 'nt' else 'clear')
         self.showTurns(zazzIndent, r)
         print()
         self.showMyCardInfo(zazzIndent, cards)
         print()
         for suit in r.progress:
             print(zazzIndent, 'Highest {}: {}'.format(suit, r.progress[suit]))
+        print()
+        if r.hints > 0:
+            print(zazzIndent, 'There are', r.hints, 'hints remaining')
+        print(zazzIndent, len(r.deck), 'cards remaining in the deck')
+        print(zazzIndent, r.lightning, 'mistake(s) so far!')
         print()
 
     def getPlayerHands(self, r):
