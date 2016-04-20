@@ -154,40 +154,37 @@ class Round:
                 else:
                     card['indirect'].append(info) # Card does not match hint.
             self.hints -= 1
-            description = '{} to {}'.format(info, self.h[targetPlayer].name)
+            desc = '{} to {}'.format(info, self.h[targetPlayer].name)
 
         else:
             card = playValue
             assert card in hand.cards
 
-            description = card['name']
+            desc = card['name']
 
             if playType == 'discard':
                 if self.replace_card(card, hand):
-                    description += ' and draws {}'\
-                                    .format(hand.cards[-1]['name'])
+                    desc += ' and draws {}'.format(hand.cards[-1]['name'])
                 self.hints = min(self.hints + 1, N_HINTS)
 
             elif playType == 'play':
                 value, suit = card['name']
                 if self.replace_card(card, hand):
-                    description += ' and draws {}'\
-                                    .format(hand.cards[-1]['name'])
+                    desc += ' and draws {}'.format(hand.cards[-1]['name'])
                 if self.progress[suit] == int(value) - 1: # Legal play
                     self.progress[suit] += 1
                     if value == '5':
                         self.hints = min(self.hints + 1, N_HINTS)
                 else: # Illegal play
                     self.lightning += 1
-                    description += ' (DOH!)'
+                    desc += ' (DOH!)'
 
         self.whoseTurn = (self.whoseTurn + 1) % self.nPlayers
         self.turnNumber += 1
 
         if self.verbose:
             self.logger.info(self.zazz[1] + ' {} [{}] {}s {}'\
-                    .format(hand.name, verboseHandAtStart,
-                            playType, description))
+                    .format(hand.name, verboseHandAtStart, playType, desc))
             self.zazz[1] = ' ' * len(self.zazz[1])
 
 
