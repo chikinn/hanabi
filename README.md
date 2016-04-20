@@ -13,34 +13,33 @@ There is no max number of players.  With more than 5, the hand size is still 4
 cards.
 
 ## Example usage
-    $ ./hanabi_wrapper.py cheater cheater -t purple -n 1000 -v silent
+    $ ./hanabi_wrapper.py newest newest newest newest
 or
 
-    $ ./hanabi_wrapper.py cheater cheater cheater cheater -n 3
+    $ ./hanabi_wrapper.py cheater cheater -t purple -n 1000 -v silent
 
 ## Example output
-    AVERAGE SCORE (+/- 1 std. err.): 23.54 +/- 0.09
+    ROUND 0:
+    [HANDS] Newest1: 1g 1? 2g 4?
+            Newest2: 3g 3b 1b 4b
+            Newest3: 3y 2r 3w 4r
+            Newest4: 3r 4r 5y 1r
+    [PLAYS] Newest1 [1g 1? 2g 4?] hints 1 to Newest2
+            Newest2 [3g 3b 1b 4b] plays 1b and draws 1g
+            Newest3 [3y 2r 3w 4r] hints 1 to Newest4
+            Newest4 [3r 4r 5y 1r] plays 1r and draws 3r
+            ...
+            Newest1 [4y 4b 2w 1?] plays 4b and draws 1g
+            Newest2 [1r 2y 4y 1?] discards 1r and draws 1w
+            Newest3 [5? 1b 1y 3y] hints 5 to Newest4
+            Newest4 [1b 5b 4g 2?] plays 5b
+            Newest1 [4y 2w 1? 1g] hints 3 to Newest3
+            Newest2 [2y 4y 1? 1w] discards 2y
+    Score: 25
+
 or
 
-    ROUND 1:
-    [HANDS] Cheater1: 3y 1? 3w 3r
-            Cheater2: 2g 3w 3g 1r
-            Cheater3: 2? 4? 1y 2b
-            Cheater4: 1b 2r 1b 1w
-    [PLAYS] Cheater1 [3y 1? 3w 3r] plays 1? and draws 1w
-            Cheater2 [2g 3w 3g 1r] plays 1r and draws 1y
-            Cheater3 [2? 4? 1y 2b] plays 2? and draws 3y
-            Cheater4 [1b 2r 1b 1w] plays 1w and draws 3g
-            ...
-            Cheater1 [3y 1r 2w 3?] plays 3y and draws 5y
-            Cheater2 [1g 1? 1b 2b] discards 1? and draws 2?
-            Cheater3 [1y 3y 3r 4b] discards 3y and draws 2y
-            Cheater4 [1y 1g 2r 5r] plays 5r and draws 3b
-            Cheater1 [1r 2w 3? 5y] discards 1r
-            Cheater2 [1g 1b 2b 2?] discards 1g
-            Cheater3 [1y 3r 4b 2y] discards 2y
-            Cheater4 [1y 1g 2r 3b] discards 2r
-    Score: 26
+    AVERAGE SCORE (+/- 1 std. err.): 23.54 +/- 0.09
 
 ## Available players
 * **Cheating Idiot** (`cheater`) by RK  
@@ -51,8 +50,8 @@ or
   Like `basic` but checks direct and indirect info to handle rainbows
 * **Newest Card** (`newest`) by BZ  
   Plays newest hinted card (and hints accordingly), discards oldest card
-* **Human** (`human`) by Greg Hutchings  
-  Allows you to play alongside the AIs (works best on -v silent or log)
+* **Human** (`human`) by GH  
+  Allows you to play alongside the AIs (works best on `-v silent` or `log`)
 
 ## How to write your own AI player
 Use an existing player as a guide.  `CheatingIdiot` is especially simple.
