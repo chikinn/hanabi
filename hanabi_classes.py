@@ -96,7 +96,7 @@ class Round:
             handSize += 1
         for i in range(self.nPlayers): # Deal cards to all players.
             for j in range(handSize):
-                self.h[i].add(self.draw(), self.turnNumber - j)
+                self.h[i].add(self.draw(), self.turnNumber - handSize + j)
             if self.verbose:
                 self.h[i].show(self.zazz[0], self.logger)
                 self.zazz[0] = ' ' * len(self.zazz[0])
