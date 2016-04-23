@@ -42,17 +42,31 @@ class NewestCardPlayer:
     def play(self, r):
         me = r.whoseTurn
         cards = r.h[me].cards # don't look!
-        progress = r.progress
+        # may modify in anticipation of new plays before giving hint
+        progress = r.progress.copy()
+
+        # which players already may have plays queued up
+        alreadyHinted = {}
+        hinterPosition = 1 # turns since my previous play
+        if len(r.playHistory) < 4:
+            hinterPosition = 5 - len(r.playHistory)
         # first preference is to play hinted cards, then known
         # was I hinted since my last turn?
         # only care about the first hint received in that time
-        for playType, playValue in r.playHistory[-r.nPlayers:]:
+        for playType, playValue in r.playHistory[1-r.nPlayers:]:
             if playType == 'hint':
                 target, info = playValue
+                # number of turns until hinted player plays
+                hintee = (target - me + r.nPlayers) % r.nPlayers
                 if target == me:
                     play = self.get_my_newest_hinted(cards, info)
                     if play:
                       return 'play', play
+                elif hintee < hinterPosition: # hintee hasn't yet played
+                    targetCard = self.get_newest_hinted(r.h[target].cards, info)
+                    if targetCard:
+                        alreadyHinted[target] = targetCard
+            hinterPosition += 1
 
         # check my knowledge about my cards, are any guaranteed playable?
         myPlayableCards = deduce_plays(cards, progress, r.suits)
@@ -63,6 +77,13 @@ class NewestCardPlayer:
         if r.hints > 0:
             # look around at each other hand to see if anything is playable
             for i in list(range(me+1, r.nPlayers)) + list(range(0, me)):
+                # if i has already been hinted, don't hint them, but consider
+                # what they will play before hinting the following player
+                if i in alreadyHinted:
+                    value, suit = alreadyHinted[i]['name']
+                    if progress[suit] == int(value) - 1:
+                       progress[suit] += 1
+                    continue
                 othersCards = r.h[i].cards
                 playableCards = get_plays(othersCards, progress)
 
