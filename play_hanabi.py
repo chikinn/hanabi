@@ -20,6 +20,9 @@ def play_one_round(gameType, players, names, verbosity):
 
         if all(x == max(SUIT_CONTENTS) for x in r.progress.values()):
             break # End round early if already won.
+            
+        if r.Resign:
+            break # Resignation for debug purposes
 
         if r.lightning == N_LIGHTNING:
             return 0 # Award no points for a loss.  TODO: togglable behavior?

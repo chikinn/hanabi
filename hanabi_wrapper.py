@@ -15,6 +15,7 @@ from scipy import stats, mean
 from play_hanabi import play_one_round
 from cheating_idiot_player import CheatingIdiotPlayer
 from most_basic_player import MostBasicPlayer
+from EncodeStrategy_AI.EncodingPlayer import EncodingPlayer
 ### TODO: IMPORT YOUR PLAYER HERE
 
 
@@ -33,13 +34,18 @@ class hanabi_wrapper:
         assert verbosity in ('silent', 'scores', 'verbose')
 
         # Load players.
-        rawNames = args[:-3]
+        if type(args[0]) == list:
+            rawNames = args[0]  # Added for convenient AI input
+        else:
+            rawNames = args[:-3]
         players = []
         for i in range(len(rawNames)):
             if rawNames[i] == 'cheater':
                 players.append(CheatingIdiotPlayer())
             elif rawNames[i] == 'basic':
                 players.append(MostBasicPlayer())
+            elif rawNames[i] == 'encoding_':
+                players.append(EncodingPlayer())
             ### TODO: YOUR NEW PLAYER NAME GOES HERE
             # elif rawNames[i] == 'yourDumbName':
             #     players.append(YourDumbPlayer())

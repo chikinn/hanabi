@@ -12,7 +12,7 @@ import hanabi_wrapper
 import platform
 import sys
 
-WindowsArgList = ['cheater','cheater','cheater','vanilla',2,'verbose']
+WindowsArgList = [['encoding_']*5,'vanilla',100,'silent']
 
 def usage():
     """Print a standard Unix usage string."""
@@ -32,5 +32,5 @@ if len(sys.argv) < 6:
 else:
     Arguements = sys.argv[1:]
     
-if len(Arguements) >= 5:
+if len(Arguements) >= 5 or type(Arguements[0]) == list:
     hanabi_wrapper.hanabi_wrapper().run(Arguements)

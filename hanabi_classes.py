@@ -62,6 +62,7 @@ class Round:
         self.whoseTurn     = 0
         self.turnNumber    = 0
         self.playHistory   = []
+        self.HandHistory   = [] # Hands at the start of each turn
         self.progress      = {suit : 0 for suit in self.suits}
         self.gameOverTimer = None
         self.hints         = N_HINTS
@@ -69,6 +70,11 @@ class Round:
         
         self.verbosity = verbosity
         self.zazz = ['[HANDS]', '[PLAYS]']
+        
+        self.Resign = False
+        
+        self.NameRecord = names # Added so that AI can check what players it is playing with
+        self.DropIndRecord = [] # Keeps track of the index of the dropped card
 
     def generate_deck_and_deal_hands(self):
         """Construct a deck, shuffle, and deal."""
@@ -78,10 +84,10 @@ class Round:
                 deck.append(number + suit)
 
         self.cardsLeft = deepcopy(deck) # Start tracking unplayed cards.
-
+ 
         random.shuffle(deck)
         self.deck = deck
-        
+
         handSize = 4
         if self.nPlayers < 4:
             handSize += 1
@@ -100,7 +106,8 @@ class Round:
         """Drop the card, draw a new one, and update public info."""
         if not card['known']:
             self.cardsLeft.remove(card['name'])
-        hand.drop(card)
+        ReplacedIndex = hand.drop(card)
+        self.DropIndRecord.append(ReplacedIndex)
         if self.deck != []:
             hand.add(self.draw(), self.turnNumber)
 
@@ -108,6 +115,7 @@ class Round:
         """Retrieve and execute AI p's play for whoever's turn it is."""
         play = playType, playValue = p.play(self)
         self.playHistory.append(play)
+        self.HandHistory.append(deepcopy(self.h))
         hand = self.h[self.whoseTurn]
 
         if playType == 'hint':
@@ -124,7 +132,11 @@ class Round:
                     card['indirect'].append(info) # Card does not match hint.
             self.hints -= 1
             description = '{} to {}'.format(info, self.h[targetPlayer].name)
-
+        
+        elif playType == 'resign':
+                self.Resign = True
+                description = ''
+        
         else:
             card = playValue
             assert card in hand.cards
@@ -189,8 +201,9 @@ class Round:
 
         def drop(self, card):
             """Discard a card from the hand."""
-            for c in self.cards: # To avoid ambiguity, all of the card data is
+            for i,c in enumerate(self.cards): # To avoid ambiguity, all of the card data is
                 if c == card:    #   checked instead of just the name.
                     self.cards.remove(c)
-                    break
+                    return i
+#                    break
 
