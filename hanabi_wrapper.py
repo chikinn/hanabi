@@ -22,6 +22,7 @@ from most_basic_player import MostBasicPlayer
 from basic_rainbow_player import BasicRainbowPlayer
 from newest_card_player import NewestCardPlayer
 from human_player import HumanPlayer
+from EncodingPlayer import EncodingPlayer
 ### TODO: IMPORT YOUR PLAYER
 
 # Define all available players.  TODO: ADD YOURS
@@ -29,7 +30,8 @@ availablePlayers = {'cheater'  : CheatingIdiotPlayer,
                     'basic'    : MostBasicPlayer,
                     'brainbow' : BasicRainbowPlayer,
                     'newest'   : NewestCardPlayer,
-                    'human'    : HumanPlayer}
+                    'human'    : HumanPlayer,
+                    'encoding_': EncodingPlayer}
 
 # Parse command-line args.
 parser = argparse.ArgumentParser(description='Process some integers.')
@@ -83,6 +85,8 @@ logger = logging.getLogger('game_log')
 logger.setLevel(logging.DEBUG)
 ch = logging.FileHandler('games.log') if args.verbosity == 'log'\
                                 else logging.StreamHandler()
+for i in range(len(logger.handlers)): logger.handlers.pop() # Added to remove duplicate logging output in Spyder
+
 ch.setLevel(logging.INFO)
 logger.addHandler(ch)
 
@@ -111,3 +115,4 @@ if len(scores) > 1: # Only print stats if there were multiple rounds.
                 .format(str(mean(scores))[:5], str(stats.sem(scores))[:4]))
 elif args.verbosity == 'silent': # Still print score for silent single round
     logger.info('Score: ' + str(scores[0]))
+    

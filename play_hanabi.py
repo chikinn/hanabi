@@ -21,6 +21,9 @@ def play_one_round(gameType, players, names, verbosity, lossScore):
         if all(x == max(SUIT_CONTENTS) for x in r.progress.values()):
             break # End round early if already won.
 
+        if r.Resign:
+            break # Resignation for debug purposes
+
         if r.lightning == N_LIGHTNING:
             if lossScore == 'zero':
                 return 0 # Award no points for a loss...

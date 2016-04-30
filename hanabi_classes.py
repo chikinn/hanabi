@@ -60,6 +60,7 @@ class Round:
         self.whoseTurn     = 0
         self.turnNumber    = 0
         self.playHistory   = []
+        self.HandHistory   = [] # Hands at the start of each turn
         self.progress      = {suit : 0 for suit in self.suits}
         self.gameOverTimer = None
         self.hints         = N_HINTS
@@ -71,6 +72,10 @@ class Round:
         self.zazz = ['[HANDS]', '[PLAYS]']
 
         self.logger = logging.getLogger('game_log')
+        
+        self.NameRecord = names # Added so that AI can check what players it is playing with
+        self.DropIndRecord = [] # Keeps track of the index of the dropped card
+        self.Resign = False
         if not len(self.logger.handlers):
             # Define logging handlers if not defined by wrapper script
             # Will only happen a single time, even for multiple games
@@ -111,7 +116,8 @@ class Round:
         """Drop the card, draw a new one, and update public info."""
         if not card['known']:
             self.cardsLeft.remove(card['name'])
-        hand.drop(card)
+        ReplacedIndex = hand.drop(card)
+        self.DropIndRecord.append(ReplacedIndex)
         if self.deck != []:
             hand.add(self.draw(), self.turnNumber)
             return True
@@ -138,6 +144,7 @@ class Round:
 
         play = playType, playValue = p.play(self)
         self.playHistory.append(play)
+        self.HandHistory.append(deepcopy(self.h))
         hand = self.h[self.whoseTurn]
 
         verboseHandAtStart = ' '.join([card['name'] for card in hand.cards])
@@ -155,6 +162,10 @@ class Round:
                     card['indirect'].append(info) # Card does not match hint.
             self.hints -= 1
             desc = '{} to {}'.format(info, self.h[targetPlayer].name)
+
+        elif playType == 'resign':
+                self.Resign = True
+                desc        = ''
 
         else:
             card = playValue
@@ -222,7 +233,7 @@ class Round:
 
         def drop(self, card):
             """Discard a card from the hand."""
-            for c in self.cards: # To avoid ambiguity, all of the card data is
+            for i,c in enumerate(self.cards): # To avoid ambiguity, all of the card data is
                 if c == card:    #   checked instead of just the name.
                     self.cards.remove(c)
-                    break
+                    return i
