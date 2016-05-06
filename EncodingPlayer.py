@@ -45,7 +45,6 @@ class EncodingPlayer:
                 self.SortedDeck.append(number + suit)
         
         
-        
         #First element is suit, second is numeric value
         self.InformationMatrix = self.CompleteHandToInt(r,range(self.nPlayers),0)
         
@@ -57,7 +56,6 @@ class EncodingPlayer:
         self.CodeList.append('0N_1-4+__3S_all__3N_1,2+')
         self.CodeList.append('4S_all_3,1:0,2:1,3__4N_1,2+_0,2:1,3__1N_1-4+')
         self.CodeList.append('0S_all__1S_all')
-        
     
     def play(self, r):
         nPriorTurns = len(r.playHistory)
@@ -99,18 +97,18 @@ class EncodingPlayer:
                     MatLabel = {'N':'NumMat','S':'SuitMat'}[HintType]
                     for j,J in enumerate(r.HandHistory[i][GivenHint[0]].cards):
                         
-                        PriorKnowedge = c(self.InformationMatrix[MatLabel][GivenHint[0],j])
-                        if PriorKnowedge == 'x':
+                        PriorKnowledge = c(self.InformationMatrix[MatLabel][GivenHint[0],j])
+                        if PriorKnowledge == 'x':
                             if HintType == 'N':
-                                PriorKnowedge = self.NumStr
+                                PriorKnowledge = self.NumStr
                             else:
-                                PriorKnowedge = self.SuitStr
+                                PriorKnowledge = self.SuitStr
                         else:
                             if HintType == 'S':
-                                if len(PriorKnowedge) == 1:
-                                    PriorKnowedge = str([r.suits[int(k)] for k in PriorKnowedge.split(',')])[1:-1]
+                                if len(PriorKnowledge) == 1:
+                                    PriorKnowledge = str([r.suits[int(k)] for k in PriorKnowledge.split(',')])[1:-1]
     
-                        DirectSet = list(set(PriorKnowedge.split(',')).intersection(J['direct']))
+                        DirectSet = list(set(PriorKnowledge.split(',')).intersection(J['direct']))
                         if len(DirectSet) == 1:
                             pass
                             if HintType == 'S':
@@ -119,7 +117,7 @@ class EncodingPlayer:
                                 self.InformationMatrix[MatLabel][GivenHint[0],j] = c(DirectSet[0])
                         else:
                             StrictIndirect = set(J['indirect']) - set(J['direct'])
-                            IndirectSet = set(PriorKnowedge.split(',')) - StrictIndirect
+                            IndirectSet = set(PriorKnowledge.split(',')) - StrictIndirect
                             
                             #Currently only use indirect method for numeric hints
                             if HintType == 'N':
@@ -141,8 +139,6 @@ class EncodingPlayer:
                     self.CheckEncoding(r,i+1)
                 else:
                     raise NameError('Unknown action')
-                          
-            
             
         
         cards = r.h[r.whoseTurn].cards # don't look!
@@ -170,7 +166,6 @@ class EncodingPlayer:
             Hint = self.EncodingTables[self.SelfID][EncodedValue]
             return 'hint', (Hint[0],Hint[1])
         
-        
         return 'resign', ''
 
     def CodeFromInfoMat(self,CurrentPlayer,NumInHand):        
@@ -189,10 +184,10 @@ class EncodingPlayer:
                 if KnownStr == 'x': KnownStr = self.SuitStr
                 SuitPosMat[i,j] = len(KnownStr.split(','))
         
-        CandidateIndicies = list(it.product(range(self.nCards),repeat=self.nPlayers-1))
+        CandidateIndices = list(it.product(range(self.nCards),repeat=self.nPlayers-1))
         ReductionListNum = []
         ReductionListSuit = []
-        for i,I in enumerate(CandidateIndicies):
+        for i,I in enumerate(CandidateIndices):
             nReductionNum = 0
             nReductionSuit = 0
             for j,J in enumerate(I):
@@ -209,12 +204,12 @@ class EncodingPlayer:
             # Prioritize number resolution over suit resolution
             for j in range(len(NumSortInd)):
                 if ReductionListNum[NumSortInd[j]] == i:
-                    ColInd = list(CandidateIndicies[NumSortInd[j]])
+                    ColInd = list(CandidateIndices[NumSortInd[j]])
                     if all([HandNumOther[k] > K for k,K in enumerate(ColInd)]):
                         CodeCandidateList.append('N:' + str(ColInd)[1:-1])
             for j in range(len(SuitSortInd)):
                 if ReductionListNum[SuitSortInd[j]] == i:
-                    ColInd = list(CandidateIndicies[SuitSortInd[j]])
+                    ColInd = list(CandidateIndices[SuitSortInd[j]])
                     if all([HandNumOther[k] > K for k,K in enumerate(ColInd)]):
                         CodeCandidateList.append('S:' + str(ColInd)[1:-1])
         
@@ -257,7 +252,6 @@ class EncodingPlayer:
             if NumMatStr == 'x': NumMatStr = self.NumStr
             SuitMatStr =  c(self.InformationMatrix['SuitMat'][self.SelfID,i])
             if SuitMatStr == 'x': SuitMatStr = str(range(5))[1:-1]
-            
 
             SuitList =  [self.SuitStr.split(',')[l] for l in 
                         [int(k) for k in SuitMatStr.split(',')]]
@@ -273,7 +267,6 @@ class EncodingPlayer:
                 Output.append(i)
         return Output
 
-
     def GetPlayInd(self,Progress):
         Playable = self.GetPlayableCards(Progress)
         if len(Playable['PlayableInd']) == 0:
@@ -282,7 +275,6 @@ class EncodingPlayer:
         newCandidates = [K for k,K in enumerate(Playable['PlayableInd']) if Playable['nPossible'][k] == Max_nPossible]
         return newCandidates[0]
         
-    
     def GetPlayableCards(self,Progress):
         Output = {'PlayableInd':[],'nPossible':[]}        
         ValidPlays = []
@@ -367,7 +359,6 @@ class EncodingPlayer:
         for i,I in enumerate(MixBaseEnum):
             if np.array_equal(I,ResultList):
                 return i,ResultList
-
  
     def ValueFromCode(self,Code,DenseOtherHands,EncodedValue,Player):
         MixBaseList = []
@@ -493,7 +484,6 @@ class EncodingPlayer:
                             raise NameError('Incorrect value detected in encoding scheme: [' 
                                     + str(i) + ',' + str(j) + ']')
 
-
     def InfoMatHumanReadable(self):
         print ''
         InfoMatPrint = c(self.InformationMatrix)
@@ -525,8 +515,3 @@ class EncodingPlayer:
                     print PadStr(PrintStr,MaxLen) + ' |' + ' '*4,
                 print ''
             print ''
-    
-    
-    
-    
-    
