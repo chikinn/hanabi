@@ -13,6 +13,7 @@ Common attributes/arguments:
 import random
 import logging
 from copy import deepcopy
+import sys
 
 VANILLA_SUITS = 'rygbw'
 SUIT_CONTENTS = '1112233445'
@@ -57,14 +58,15 @@ class Round:
         self.nPlayers = len(names)
         self.h = [self.Hand(i, names[i]) for i in range(self.nPlayers)]
 
-        self.whoseTurn     = 0
-        self.turnNumber    = 0
-        self.playHistory   = []
-        self.HandHistory   = [] # Hands at the start of each turn
-        self.progress      = {suit : 0 for suit in self.suits}
-        self.gameOverTimer = None
-        self.hints         = N_HINTS
-        self.lightning     = 0
+        self.whoseTurn          = 0
+        self.turnNumber         = 0
+        self.playHistory        = []
+        self.HandHistory        = [] # Hands at the start of each turn
+        self.progressHistory    = []
+        self.progress           = {suit : 0 for suit in self.suits}
+        self.gameOverTimer      = None
+        self.hints              = N_HINTS
+        self.lightning          = 0
 
         self.verbosity = verbosity
         self.verbose = (verbosity in ('verbose', 'log'))
@@ -76,6 +78,11 @@ class Round:
         self.NameRecord = names # Added so that AI can check what players it is playing with
         self.DropIndRecord = [] # Keeps track of the index of the dropped card
         self.Resign = False
+        
+        # This provides a shared starting seed if players wish to use fixed
+        # seed psudo RNG methods.
+        self.CommonSeed = random.randint(0,sys.maxint)
+        
         if not len(self.logger.handlers):
             # Define logging handlers if not defined by wrapper script
             # Will only happen a single time, even for multiple games
@@ -145,6 +152,7 @@ class Round:
         play = playType, playValue = p.play(self)
         self.playHistory.append(play)
         self.HandHistory.append(deepcopy(self.h))
+        self.progressHistory.append(deepcopy(self.progress))
         hand = self.h[self.whoseTurn]
 
         verboseHandAtStart = ' '.join([card['name'] for card in hand.cards])
