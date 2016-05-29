@@ -23,15 +23,17 @@ from basic_rainbow_player import BasicRainbowPlayer
 from newest_card_player import NewestCardPlayer
 from human_player import HumanPlayer
 from EncodingPlayer import EncodingPlayer
+from GeneralEncoding import GeneralEncodingPlayer
 ### TODO: IMPORT YOUR PLAYER
 
 # Define all available players.  TODO: ADD YOURS
-availablePlayers = {'cheater'  : CheatingIdiotPlayer,
-                    'basic'    : MostBasicPlayer,
-                    'brainbow' : BasicRainbowPlayer,
-                    'newest'   : NewestCardPlayer,
-                    'human'    : HumanPlayer,
-                    'encoding_': EncodingPlayer}
+availablePlayers = {'cheater'   : CheatingIdiotPlayer,
+                    'basic'     : MostBasicPlayer,
+                    'brainbow'  : BasicRainbowPlayer,
+                    'newest'    : NewestCardPlayer,
+                    'human'     : HumanPlayer,
+                    'encoding_' : EncodingPlayer,
+                    'genencode_': GeneralEncodingPlayer}
 
 # Parse command-line args.
 parser = argparse.ArgumentParser(description='Process some integers.')
