@@ -519,11 +519,14 @@ class GeneralEncodingPlayer:
         for i in self.NumSetCombo:
             PreProduct = []
             for j in i:
-                PreProduct.append(BaseSets[j-1])
+                if len(BaseSets[j-1]) > 0:
+                    PreProduct.append(BaseSets[j-1])
             for j in list(it.product(*PreProduct)):
-                ValidCombinations.append(j)
-                
+                if len(j) > 0:
+                    ValidCombinations.append(j)
+        
         nMCPerValidCombo = int(self.nMCCandidates/len(ValidCombinations))
+            
         CodeCandidateList = []
         for i in ValidCombinations:
             for k in range(nMCPerValidCombo):
@@ -547,8 +550,7 @@ class GeneralEncodingPlayer:
                         TrialStr += re.sub(' ','',str(
                                     CardNumberGroups[int(j[:-1])]))
                     TrialStr += '__'
-                CodeCandidateList.append(TrialStr[:-2])
-            
+                CodeCandidateList.append(TrialStr[:-2])          
     
         BestReduction = 0
         BestCode = CodeCandidateList[0]
@@ -733,10 +735,12 @@ class GeneralEncodingPlayer:
         if len(O) > 0: NumericSets[-1].append(O)
             
         # [[P],[D+O]]
-        NumericSets.append([])   
-        NumericSets[-1].append(P)
-        if len(D) + len(O) > 0: NumericSets[-1].append(list(set(D).union(O)))
-            
+        if len(D) + len(O) > 0:
+            NumericSets.append([])   
+            NumericSets[-1].append(P)
+            NumericSets[-1].append(list(set(D).union(O)))
+
+        
         # Variable end grouping sets
         for k in range(len(D)+len(P),self.nCards):
             NumericSets.append([])
@@ -753,8 +757,10 @@ class GeneralEncodingPlayer:
         UniqNumericSets = []
         for i in NumericSets:
             if i not in UniqNumericSets:
-                UniqNumericSets.append(i)
-                
+                if len(i) > 1:
+                    UniqNumericSets.append(i)
+
+            
         return UniqNumericSets
     
     def PrintInfoMat(self,row = ''):
