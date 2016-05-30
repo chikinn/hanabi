@@ -33,19 +33,20 @@ class GeneralEncodingPlayer:
         PlayableCards, ExpectedValue = self.GetPlayableIndex(r)
         DiscardableCards, SaferDiscard, AlreadyPlayed = self.GetDiscardable(r)
         
-#        if nPriorTurns == 0:
-#            print '\n'*10
-#        
-#        print ''
-#        self.PrintInfoMat(self.SelfID)
-#        print r.progress
-#        time.sleep(0.4)
-#        if r.gameOverTimer == 0:
-#            if np.sum([r.progress[key] for key in r.progress]) <= 22:
-#                raise NameError('')
+        # If PrintInternal is set to true, internal state information will be 
+        # printed. Recommended to be used with verbose output. The sleep call
+        # is to ensure prints are grouped with the correct verbose log print.
+        # It does, however, slow down evaluation somewhat.
+        PrintInternal = False
+        if PrintInternal:
+            if nPriorTurns == 0:
+                print '\n'*10
             
-
-            
+            print ''
+            self.PrintInfoMat(self.SelfID)
+            print r.progress
+            time.sleep(0.4)
+         
         
         """Central Strategy Block"""
         # This block is intended to compactly specify the AI strategy so that
