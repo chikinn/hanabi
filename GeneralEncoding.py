@@ -33,12 +33,16 @@ class GeneralEncodingPlayer:
         PlayableCards, ExpectedValue = self.GetPlayableIndex(r)
         DiscardableCards, SaferDiscard, AlreadyPlayed = self.GetDiscardable(r)
         
+#        if nPriorTurns == 0:
+#            print '\n'*10
+#        
 #        print ''
 #        self.PrintInfoMat(self.SelfID)
 #        print r.progress
 #        time.sleep(0.4)
 #        if r.gameOverTimer == 0:
-#            print r.progress
+#            if np.sum([r.progress[key] for key in r.progress]) <= 22:
+#                raise NameError('')
             
 
             
@@ -71,7 +75,20 @@ class GeneralEncodingPlayer:
                         ExpectedValue[m] == np.min(ExpectedValue)][0]
             return 'play',r.h[r.whoseTurn].cards[PlayIndex]
             
-          
+        
+        nPlayed = self.GetnPlayed(r)
+        NearEndCutoff = 2
+        
+        # Estimate for the number of cards left to be drawn. Incorrect in the
+        # end game (incomplete hands) but that is fine
+        nDraw = len(self.SortedDeck)  - nPlayed - self.nPlayers * self.nCards
+        
+        # Preempt normal discard to use up hints, drag out game.
+        if nDraw <= NearEndCutoff and r.hints > 0:
+            Code = self.GenerateCode(nPriorTurns,self.SelfID,
+                                 self.GroupCardNumbers(r.progress),r.progress)
+            Hint = self.DetermineHint(Code,self.SelfID,nPriorTurns)
+            return 'hint', (Hint[0],Hint[1])
         
         # Again, the choice of which card to discard is very primitive (lowest
         # index, favoring cards that have already been played)
@@ -129,6 +146,9 @@ class GeneralEncodingPlayer:
         # shape is always nPlayers x nCards, so this is acceptable
         self.InformationMatrix = {}
         for i in range(self.nPlayers):
+            # "Dummy" r1 at the -1 position can be pointed to during encoding
+            # if the origional target is not present (less than full hand size)
+            # See self.GenerateHandRecord for more information
             self.InformationMatrix[i,-1,'S'] = ['r']
             self.InformationMatrix[i,-1,'N'] = [1]
             for j in range(self.nCards):
@@ -163,8 +183,16 @@ class GeneralEncodingPlayer:
             
         # Misc. Values
         self.RunningPlayInd = -1
+        
+    def GetnPlayed(self,r):
+        nPlayed = 0
+        for I in r.playHistory:
+            if I[0] == 'play' or I[0] == 'discard':
+                nPlayed += 1
+        return nPlayed
 
     def GetCountFromDiscard(self,r,turn = ''):
+        # Card counting function, uses the played and discarded cards
         if turn == '':
             turn = len(r.playHistory)
         CardCount = {i:0 for i in np.unique(self.SortedDeck)}
@@ -180,6 +208,8 @@ class GeneralEncodingPlayer:
         return CardCount
         
     def GetCardCountFromHandAndDiscard(self,r):
+        # Card counting function. Uses played, discarded, and other players'
+        # hands.
         CardCount = self.GetCountFromDiscard(r)
         for i in self.OtherIDs:
             for j in range(self.nCards):
@@ -189,6 +219,9 @@ class GeneralEncodingPlayer:
         return CardCount
         
     def GetSemiSafePlay(self,r,SafeDiscard):
+        # This function calculates the probability that a card is safe to play.
+        # It only does this for the cards that are safe to discard. That way
+        # the game isn't ruined if it plays an invalid card.
         progress = r.progress
         CardCount = self.GetCardCountFromHandAndDiscard(r)
         PlayableSet = [str(progress[key]+1) + key for key in progress]
@@ -204,6 +237,7 @@ class GeneralEncodingPlayer:
         return pPlayable    
             
     def GetPlayableIndex(self,r):
+        # Gets which cards in the player's hand are safely playable.
         progress = r.progress
         CardCount = self.GetCardCountFromHandAndDiscard(r)
         PlayableSet = [str(progress[key]+1) + key for key in progress]
@@ -229,6 +263,10 @@ class GeneralEncodingPlayer:
         return PlayableCards, ExpectedValue
         
     def GetDiscardable(self,r):
+        # Gets which cards can be discarded:
+        # SafeDiscard = can be discarded
+        # SaferDiscard = more than 1 other copy
+        # SafestDiscard = already played, no issue with discarding
         SafeDiscard = []
         SaferDiscard = []
         SafestDiscard = []
@@ -254,6 +292,12 @@ class GeneralEncodingPlayer:
         return SafeDiscard, SaferDiscard, SafestDiscard
             
     def GenerateHandRecord(self,r):
+        # Converts the hands in r into a form used in this algorithm. This has
+        # several functions:
+        # 1) More convenient to access
+        # 2) No cheating. One's own hands are aliased as 'xx'
+        # 3) Builds an 'InPlay' list which allows exclusion of cards from 
+        #    encoding
         self.HandHistory = []
         self.DirectRecord = []
         self.IndirectRecord = []
@@ -319,6 +363,9 @@ class GeneralEncodingPlayer:
                     self.InPlay[-1][j,k] = False
             
     def UpdateInfoMat(self,r):
+        # This is the heart of the encoding scheme. It takes the hints that 
+        # have been given and inverts the encoding to determine what has been
+        # transmitted.
         CurrentTurn = len(r.playHistory)
         if CurrentTurn > 0:
             FirstEvalTurn = np.max([CurrentTurn - self.nPlayers,0])
@@ -328,6 +375,8 @@ class GeneralEncodingPlayer:
                 CurrentPlayer = Turn % self.nPlayers
                 if PlayType == 'hint':
                     HintingPlayer = CurrentPlayer
+                    
+                    # Back out the dynamic code chosen by the hinting player
                     Code = self.GenerateCode(Turn,HintingPlayer,
                                 self.GroupCardNumbers(r.progressHistory[Turn]),
                                 r.progressHistory[Turn])
@@ -335,6 +384,8 @@ class GeneralEncodingPlayer:
                          HintingPlayer,Turn)
                     for i in range(self.nPlayers):
                         for j in range(self.nCards):
+                            # Use the actual hinted information in addition to
+                            # the encoded information
                             for k in self.DirectRecord[Turn][i,j]:
                                 if k in self.NumberSet:
                                     self.InformationMatrix[i,j,'N'] = k
@@ -346,10 +397,18 @@ class GeneralEncodingPlayer:
                             self.InformationMatrix[i,j,'S'] = list(set(
                                 self.InformationMatrix[i,j,'S']).difference(
                                 self.IndirectRecord[Turn][i,j]))
+                                
+                            # Use card counting methods to further restrict
+                            # possibilities.
                             Improvement = True
                             while Improvement:
                                 Improvement = self.CardCountInfoMat(r,Turn)
                 elif PlayType == 'play' or PlayType == 'discard':
+                    # Shift cards to the left and initialize the rightmost
+                    # card as unknown: [1,2,3,4,5]['r','y','g','b','w']
+                    # If there is no card (endgame) this initialization is
+                    # incorrect; however anything that points to that slot gets
+                    # redirected to the dummy r1 at the -1 position.
                     self.RunningPlayInd += 1  
                     DroppedCardInd = r.DropIndRecord[self.RunningPlayInd]
                     for j in range(DroppedCardInd,self.nCards-1):
@@ -363,9 +422,12 @@ class GeneralEncodingPlayer:
                             c(self.SuitSet))
                 else:
                     raise NameError('Still to be implemented')
+        # Raise exception if a mistake is made
         self.CheckInfoMat(r)
     
     def CardCountInfoMat(self,r,Turn):
+        # This function uses card counting methods to restrict the 
+        # possibilities of the information matrix
         Improvement = False
         CardCount = self.GetCountFromDiscard(r,Turn)
         for i in range(self.nPlayers):
@@ -394,6 +456,8 @@ class GeneralEncodingPlayer:
             return Improvement
     
     def CheckInfoMat(self,r):
+        # Check to see if the information matrix is wrong, and if so raise an
+        # exception.
         for i in range(self.nPlayers):
             for j in range(self.nCards):
                 if j < len(r.h[i].cards):
@@ -415,6 +479,7 @@ class GeneralEncodingPlayer:
                         raise NameError('Error detected in the information matrix')
             
     def ExpandCode(self,Code):
+        # Utility function, just converts a string into several lists
         CodeList = Code.split('__')
         TypeList = [i.split('_')[0] for i in CodeList]
         ColList = [i.split('_')[1] for i in CodeList]
@@ -427,6 +492,9 @@ class GeneralEncodingPlayer:
                 PossibleResultList)
     
     def UpdateInformationMatrix(self,Hint,Code,HintingPlayer,Turn):
+        # This is the function which performs the modular arithmetic back
+        # calculation to convert a code and hint into the underlying encoded
+        # information and transfers it into the information matrix.
         ActualResult = self.BackCalcHintedState(Hint,Code,HintingPlayer)
         (CodeList,TypeList,ColList,GroupSetList,EvalSetList,EncodeBase,
              PossibleResultList) = self.ExpandCode(Code)
@@ -462,6 +530,8 @@ class GeneralEncodingPlayer:
                     TypeList[i]]).intersection(RestrictedSet)))
             
     def BackCalcHintedState(self,Hint,Code,HintingPlayer):
+        # Converts the actual hint (i.e. player 3 green) into the intended
+        # vector of numbers (i.e. [2,0,0])
         OtherIDs = [m for m in range(self.nPlayers) if m != HintingPlayer]
         (CodeList,TypeList,ColList,GroupSetList,EvalSetList,EncodeBase,
              PossibleResultList) = self.ExpandCode(Code)
@@ -474,6 +544,9 @@ class GeneralEncodingPlayer:
         return ActualResult
         
     def DetermineHint(self,Code,HintingPlayer,Turn):
+        # Takes a selected code, looks at the other players' hands, and
+        # determines what hint to give to provide the information corresponding
+        # to the selected code.
         OtherIDs = [m for m in range(self.nPlayers) if m != HintingPlayer]
         (CodeList,TypeList,ColList,GroupSetList,EvalSetList,EncodeBase,
              PossibleResultList) = self.ExpandCode(Code)
@@ -499,6 +572,8 @@ class GeneralEncodingPlayer:
         return Hint
         
     def GenerateCode(self,TurnNumber,HintingPlayer,CardNumberGroups,progress):
+        # Iterates through a number of candidate codes (using common seed 
+        # Monte Carlo) and selects the best based on some evaluation criteria
         OtherIDs = [m for m in range(self.nPlayers) if m != HintingPlayer]
         self.StartRandom(self.RandomSeedList[TurnNumber])
         SuitSetStr = ''
@@ -564,6 +639,10 @@ class GeneralEncodingPlayer:
         return BestCode
 
     def EvaluateCode(self,OtherIDs,Code,progress):
+        # This function takes a code and returns an evaluation of the merit of
+        # said code. Currently this takes the form of a degree of freedom (DoF)
+        # minimization weighted by some coefficients (AMaster)
+    
         # Weighting coefficients for determining set reduction. Currently just
         # naively the number of each card number in the deck
         AMaster = [3,2,2,2,1]
@@ -683,6 +762,8 @@ class GeneralEncodingPlayer:
                                                     repeat=self.nPlayers-1)))
                                                     
     def GetPDO(self,progress):
+        # Utility to get the set of playable (P), discardable (D),
+        # and other (O)
         NumericVec =  [progress[key] for key in progress]
         
         P = list(np.unique(
@@ -764,6 +845,8 @@ class GeneralEncodingPlayer:
         return UniqNumericSets
     
     def PrintInfoMat(self,row = ''):
+        # Prints the current state of the information matrix in an aestetically
+        # pleasing fashon.
         if row == '':
             playerRange = range(self.nPlayers)
         else:
