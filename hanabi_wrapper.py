@@ -16,6 +16,7 @@ import sys, argparse, logging
 from time import gmtime, strftime
 from scipy import stats, mean
 from play_hanabi import play_one_round
+import random
 ### TODO: IMPORT YOUR PLAYER
 from cheating_idiot_player import CheatingIdiotPlayer
 from most_basic_player import MostBasicPlayer
@@ -48,6 +49,8 @@ parser.add_argument('-v', '--verbosity', default='verbose',
   metavar='verbosity', type=str, help='silent, scores, verbose, or log')
 parser.add_argument('-l', '--loss_score', default='zero', metavar='loss_score',
   type=str, help='zero or full')
+parser.add_argument('-s', '--seed', default=-1,
+  metavar='seed', type=int, help='fixed random seed.')
 args = parser.parse_args()
 
 assert args.game_type in ('rainbow', 'purple', 'vanilla')
@@ -97,6 +100,9 @@ if args.verbosity == 'log':
     logger.info('{} ROUNDSET: {} round(s) of {} Hanabi'\
                 .format(strftime("%a, %d %b %Y %H:%M:%S +0000", gmtime()),
                 args.n_rounds, args.game_type))
+                
+if args.seed >= 0:
+    random.seed(args.seed)
 
 # Play rounds.
 scores = []
