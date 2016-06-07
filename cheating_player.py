@@ -15,25 +15,12 @@ from bot_utils import get_plays
 
 def get_played_cards(cards, progress):
     """Return a list of cards which are already played; call only on visible cards!"""
-    l = []
-    for card in cards:
-        value, suit = card['name']
-        if int(value) <= progress[suit]:
-            l.append(card)
-    return l
+    return filter(lambda x: int (x['name'][0]) <= progress[x['name'][1]], cards)
 
 def get_duplicate_cards(cards):
     """Returns a list of duplicates in cards; call only on visible cards!"""
-    l = []
-    lcards = list(cards)
     names = map(lambda x: x['name'],cards)
-    while lcards:
-        card = lcards.pop()
-        names.pop()
-        name = card['name']
-        if name in names:
-            l.append(card)
-    return l
+    return filter(lambda x: names.count(x['name']) > 1, cards)
 
 def get_visible_cards(cards1, cards2):
     """Returns a list of cards in cards1 which also occurs in cards2; call only on visible cards!"""
@@ -71,7 +58,7 @@ def find_lowest(cards):
     return l
 
 def get_all_visible_cards(player, r):
-    """Returns list of visible cards of any other player"""
+    """Returns list of visible cards for player"""
     l = []
     for i in range(0, r.nPlayers):
         if i == player:
@@ -157,5 +144,4 @@ class CheatingPlayer:
         # if someone can play or discard more safely before you run out of hints, give a hint
         if min(other_badness) < badness:
             return 'hint', (nextplayer, '3')
-
         return 'discard', discard
