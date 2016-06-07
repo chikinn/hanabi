@@ -87,12 +87,18 @@ class CheatingPlayer:
         cards = r.h[me].cards
         progress = r.progress
         playableCards = get_plays(cards, progress)
+
         if playableCards != []: # can I play?
             wanttoplay = find_lowest(playableCards)
             return 'play', random.choice(wanttoplay)
-        # don't discard in endgame
-        if len(r.deck) < count_unplayed_cards(r, progress) and r.hints > 0:
+        if r.hints == 8:
             return 'hint', (nextplayer, '5')
+        # TODO: code a better way to decide whether other players can do something useful
+        n = r.nPlayers-1
+        others_hinted = map(lambda x: x[0], r.playHistory[-n:]) == ['hint'] * n
+        # don't discard in endgame
+        if len(r.deck) < count_unplayed_cards(r, progress) and r.hints > 0 and not others_hinted:
+            return 'hint', (nextplayer, '4')
         discardCards = get_played_cards(cards, progress)
         if discardCards != []: # discard cards which are already played
             return 'discard', random.choice(discardCards)
@@ -110,11 +116,9 @@ class CheatingPlayer:
             discardCards = find_highest(discardCards)
             return 'discard', random.choice(discardCards)
         # if you cannot discard any card safely, give a hint.
-        # TODO: don't hint if you know your teammates also cannot do anything safely
         # TODO: hint if a teammate has a less expensive discard
-        # TODO: hint if a player can still safely discard (in a 3+ player game)
-        if r.hints > 0 and r.playHistory[-1][0] != 'hint':
-            return 'hint', (nextplayer, '5')
+        if r.hints > 0 and not others_hinted:
+            return 'hint', (nextplayer, '3')
         # print "unsafe discard"
         # print r.discardpile
         discardCards = find_highest(cards)
