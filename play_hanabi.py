@@ -11,14 +11,13 @@ def play_one_round(gameType, players, names, verbosity, lossScore):
     """Play a full round and return the score (int)."""
     r = Round(gameType, names, verbosity) # Instance of a single Hanabi round
     r.generate_deck_and_deal_hands()
-    
+
     while r.gameOverTimer != 0:
         if r.deck == [] and r.gameOverTimer == None:
             r.gameOverTimer = r.nPlayers # Begin last turns when deck depletes.
         if type(r.gameOverTimer) is int:
             r.gameOverTimer -= 1 # Count down in the last turns.
-
-        if all(x == max(SUIT_CONTENTS) for x in r.progress.values()):
+        if all(x == int(SUIT_CONTENTS[-1]) for x in r.progress.values()):
             break # End round early if already won.
 
         if r.Resign:

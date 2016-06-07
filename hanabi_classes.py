@@ -16,7 +16,7 @@ from copy import deepcopy
 import sys
 
 VANILLA_SUITS = 'rygbw'
-SUIT_CONTENTS = '1112233445'
+SUIT_CONTENTS = '1112233445' # must be ascending
 N_HINTS       = 8
 N_LIGHTNING   = 3
 
