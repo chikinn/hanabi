@@ -26,10 +26,12 @@ from newest_card_player import NewestCardPlayer
 from human_player import HumanPlayer
 from EncodingPlayer import EncodingPlayer
 from GeneralEncoding import GeneralEncodingPlayer
+from cheating_player import CheatingPlayer
 ### TODO: IMPORT YOUR PLAYER
 
 # Define all available players.  TODO: ADD YOURS
 availablePlayers = {'cheater'   : CheatingIdiotPlayer,
+                    'smart_cheater' : CheatingPlayer,
                     'basic'     : MostBasicPlayer,
                     'brainbow'  : BasicRainbowPlayer,
                     'newest'    : NewestCardPlayer,
@@ -101,7 +103,7 @@ if args.verbosity == 'log':
     logger.info('{} ROUNDSET: {} round(s) of {} Hanabi'\
                 .format(strftime("%a, %d %b %Y %H:%M:%S +0000", gmtime()),
                 args.n_rounds, args.game_type))
-                
+
 if args.seed >= 0:
     random.seed(args.seed)
 
