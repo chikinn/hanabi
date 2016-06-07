@@ -1,7 +1,7 @@
 """A cheating Hanabi player.
 
 Cheating player which tries to make intelligent moves when looking at his own cards.
-The following table gives the approximate percentages of this strategy reaching maximum score.
+The following table gives the approximate percentages of this strategy reaching maximum score (using 6 suits).
 Players | %
 --------+----
    2    | 90
