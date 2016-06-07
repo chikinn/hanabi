@@ -20,13 +20,13 @@ from hanabi_classes import SUIT_CONTENTS
 import random
 ### TODO: IMPORT YOUR PLAYER
 from cheating_idiot_player import CheatingIdiotPlayer
+from cheating_player import CheatingPlayer
 from most_basic_player import MostBasicPlayer
 from basic_rainbow_player import BasicRainbowPlayer
 from newest_card_player import NewestCardPlayer
 from human_player import HumanPlayer
 from EncodingPlayer import EncodingPlayer
 from GeneralEncoding import GeneralEncodingPlayer
-from cheating_player import CheatingPlayer
 ### TODO: IMPORT YOUR PLAYER
 
 # Define all available players.  TODO: ADD YOURS
