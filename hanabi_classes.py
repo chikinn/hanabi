@@ -162,6 +162,7 @@ class Round:
         if playType == 'hint':
             assert self.hints != 0
             targetPlayer, info = playValue
+            assert targetPlayer != self.whoseTurn # cannot hint self
             targetHand = self.h[targetPlayer]
             for card in targetHand.cards:
                 suit = card['name'][1]
