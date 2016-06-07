@@ -16,6 +16,7 @@ import sys, argparse, logging
 from time import gmtime, strftime
 from scipy import stats, mean
 from play_hanabi import play_one_round
+from hanabi_classes import SUIT_CONTENTS
 import random
 ### TODO: IMPORT YOUR PLAYER
 from cheating_idiot_player import CheatingIdiotPlayer
@@ -119,8 +120,10 @@ for i in range(args.n_rounds):
 if args.verbosity != 'silent':
     logger.info('')
 if len(scores) > 1: # Only print stats if there were multiple rounds.
-    logger.info('AVERAGE SCORE (+/- 1 std. err.): {} +/- {}'\
-                .format(str(mean(scores))[:5], str(stats.sem(scores))[:4]))
+    max_score = int(SUIT_CONTENTS[-1]) * (5 if args.game_type == 'vanilla' else 6)
+    count_max = scores.count(max_score)
+    logger.info('AVERAGE SCORE (+/- 1 std. err.): {} +/- {} ({}% maximal score)'\
+                .format(str(mean(scores))[:5], str(stats.sem(scores))[:4],
+                        str(100*count_max/ float(len(scores)))[:4]))
 elif args.verbosity == 'silent': # Still print score for silent single round
     logger.info('Score: ' + str(scores[0]))
-    
