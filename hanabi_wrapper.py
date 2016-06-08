@@ -27,6 +27,7 @@ from newest_card_player import NewestCardPlayer
 from human_player import HumanPlayer
 from encoding_player import EncodingPlayer
 from general_encoding_player import GeneralEncodingPlayer
+from hat_player import HatPlayer
 
 # Define all available players.
 availablePlayers = {'idiot'   : CheatingIdiotPlayer, ### TODO: ADD YOURS
@@ -36,7 +37,8 @@ availablePlayers = {'idiot'   : CheatingIdiotPlayer, ### TODO: ADD YOURS
                     'newest'  : NewestCardPlayer,
                     'human'   : HumanPlayer,
                     'encoder' : EncodingPlayer,
-                    'gencoder': GeneralEncodingPlayer}
+                    'gencoder': GeneralEncodingPlayer
+                    'hat'     : HatPlayer}
 
 # Parse command-line args.
 parser = argparse.ArgumentParser(description='Process some integers.')
