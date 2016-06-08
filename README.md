@@ -3,7 +3,7 @@
 
 ## Usage
     usage: ./hanabi_wrapper.py p1 p2 [p3 ...] [-t game_type] [-n n_rounds] [-v verbosity] [-l loss_score]
-      pi (AI for player i): cheater, basic, brainbow, newest, or human
+      pi (AI for player i): cheater, smart_cheater, basic, brainbow, newest, or human
       game_type: rainbow [default], purple, or vanilla
       n_rounds: positive int [default: 1]
       verbosity: verbose [default], scores, silent, or log
@@ -42,15 +42,17 @@ or
     AVERAGE SCORE (+/- 1 std. err.): 23.54 +/- 0.09
 
 ## Available players
-* **Cheating Idiot** (`cheater`) by RK  
+* **Cheating Idiot** (`cheater`) by RK<br>
   Peeks at own hand to know when to play, discards randomly, never hints
-* **Most Basic** (`basic`) by Ben Zax  
+* **Cheating Player** (`smart_cheater`) by Floris van Doorn<br>
+  Peeks at own hand and decide what to play, discard. Gives a clue if it doesn't want to discard.
+* **Most Basic** (`basic`) by Ben Zax<br>
   Plays when certain, discards randomly, hints inefficiently, no rainbows
-* **Basic Rainbow** (`brainbow`) by Greg Hutchings  
+* **Basic Rainbow** (`brainbow`) by Greg Hutchings<br>
   Like `basic` but checks direct and indirect info to handle rainbows
-* **Newest Card** (`newest`) by BZ  
+* **Newest Card** (`newest`) by BZ<br>
   Plays newest hinted card (and hints accordingly), discards oldest card
-* **Human** (`human`) by GH  
+* **Human** (`human`) by GH<br>
   Allows you to play alongside the AIs (works best on `-v silent` or `log`)
 
 ## How to write your own AI player
@@ -76,4 +78,5 @@ available as `r.h[i].cards`.  (Don't look at your own cards unless you're
 despicable like `CheatingIdiot`!  ... You make me sick.)
 
 After you write your player class, add a couple lines to `hanabi_wrapper.py` so
-the framework can detect it.  The sections you need to edit are marked `TODO:`.
+the framework can detect it. The sections you need to edit are marked `TODO:`.
+Also add your class to the `README`.
