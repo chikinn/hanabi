@@ -46,7 +46,7 @@ or
 ## Available players
 * **Cheating Idiot** (`idiot`) by RK<br>
   Peeks at own hand to know when to play, discards randomly, never hints
-* **Cheating** (`cheater`) by Floris van Doorn<br>
+* **Cheater** (`cheater`) by Floris van Doorn<br>
   Peeks at own hand to play, discard, and hint; high win rate
 * **Most Basic** (`basic`) by Ben Zax<br>
   Plays when certain, discards randomly, hints inefficiently, no rainbows

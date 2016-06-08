@@ -15,6 +15,7 @@ Command-line arguments (see usage):
 import sys, argparse, logging, random
 from time import gmtime, strftime
 from scipy import stats, mean
+from math import sqrt
 from play_hanabi import play_one_round
 from hanabi_classes import SUIT_CONTENTS
 
@@ -123,11 +124,16 @@ for i in range(args.n_rounds):
 if args.verbosity != 'silent':
     logger.info('')
 if len(scores) > 1: # Only print stats if there were multiple rounds.
-    max_score = int(SUIT_CONTENTS[-1]) * (5 if args.game_type == 'vanilla' else 6)
+    max_score = int(SUIT_CONTENTS[-1]) * \
+                (5 if args.game_type == 'vanilla' else 6)
     count_max = scores.count(max_score)
-    logger.info('AVERAGE SCORE: {} +/- {} (1 std. err.)'\
-                .format(str(mean(scores))[:5], str(stats.sem(scores))[:4]))
-    logger.info('PERFECT GAMES: {}%'
-                .format(str(100*count_max/ float(len(scores)))[:4]))
+    perfect_games = count_max/float(args.n_rounds)
+    # the sample standard deviation for the amount of perfect scores
+    std_perfect_games = sqrt(count_max * (args.n_rounds - count_max) / \
+                             float (args.n_rounds - 1)) / args.n_rounds
+    logger.info('AVERAGE SCORE: {:.2f} +/- {:.3f} (1 std. err.)'\
+                .format(mean(scores), stats.sem(scores)))
+    logger.info('PERFECT GAMES: {:.2f}% +/- {:.2f}pp'
+                .format(100*fraction, 100*std_perfect_games))
 elif args.verbosity == 'silent': # Still print score for silent single round
     logger.info('Score: ' + str(scores[0]))
