@@ -1,4 +1,4 @@
-"""A cheating Hanabi player.
+"""A smart cheating Hanabi player.
 
 Cheating player which tries to make intelligent moves when looking at his own cards.
 The following table gives the approximate percentages of this strategy reaching maximum score (using 6 suits).
@@ -8,6 +8,12 @@ Players | %
    3    | 98
    4    | 98
    5    | 97
+
+Possible improvements:
+- When playing a card, prefer to play a card you don't see in someone else's hand
+- When playing a card, prefer to play a card which allow other people to play cards of the same suit
+- When discarding a card you see in someone else's hand: don't do this if the other play has a lot of playable cards
+- When discarding the first card with some name, prefer to discard a card of a suit with low progress.
 """
 
 from hanabi_classes import *
@@ -57,12 +63,14 @@ def find_lowest(cards):
             l.append(c)
     return l
 
+def other_players(r, me):
+    """Returns a list of all players except me, in turn order starting after me"""
+    return list(range(me+1, r.nPlayers)) + list(range(0, me))
+
 def get_all_visible_cards(player, r):
     """Returns list of visible cards for player"""
     l = []
-    for i in range(0, r.nPlayers):
-        if i == player:
-            continue # don't look at your own hand
+    for i in other_players(r, player):
         l.extend(r.h[i].cards)
     return l
 
@@ -74,10 +82,6 @@ def count_unplayed_cards(r, progress):
         count += 5 - progress[suit]
     return count
 
-def other_players(r, me):
-    """Returns a list of all players except me, in turn order starting after me"""
-    return list(range(me+1, r.nPlayers)) + list(range(0, me))
-
 
 class CheatingPlayer:
 
@@ -88,18 +92,18 @@ class CheatingPlayer:
         badness between 10 and 30: discard the first copy of a non-5 card (4s are badness 10, 3s badness 20, 2s badness 30)
         badness >= 100: discard a necessary card"""
         discardCards = get_played_cards(cards, progress)
-        if discardCards: # discard cards which are already played
+        if discardCards: # discard a card which is already played
             return [0, random.choice(discardCards)]
         discardCards = get_duplicate_cards(cards)
-        if discardCards: # discard cards which occur twice in your hand
+        if discardCards: # discard a card which occurs twice in your hand
             return [0, random.choice(discardCards)]
         discardCards = get_visible_cards(cards, get_all_visible_cards(player, r))
-        if discardCards: # discard cards which you can see (lowest first)
+        if discardCards: # discard a card which you can see (lowest first)
             discardCards = find_lowest(discardCards)
             return [1, random.choice(discardCards)]
         discardCards = get_nonvisible_cards(cards, r.discardpile)
         discardCards = filter(lambda x: x['name'][0] != '5', discardCards)
-        if discardCards: # discard cards which are not unsafe to discard
+        if discardCards: # discard a card which is not unsafe to discard
             discardCards = find_highest(discardCards)
             card = random.choice(discardCards)
             return [50 - 10 * int(card['name'][0]), card]
