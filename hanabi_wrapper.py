@@ -38,7 +38,7 @@ availablePlayers = {'idiot'   : CheatingIdiotPlayer, ### TODO: ADD YOURS
                     'newest'  : NewestCardPlayer,
                     'human'   : HumanPlayer,
                     'encoder' : EncodingPlayer,
-                    'gencoder': GeneralEncodingPlayer
+                    'gencoder': GeneralEncodingPlayer,
                     'hat'     : HatPlayer}
 
 # Parse command-line args.
@@ -133,7 +133,7 @@ if len(scores) > 1: # Only print stats if there were multiple rounds.
                              float (args.n_rounds - 1)) / args.n_rounds
     logger.info('AVERAGE SCORE: {:.2f} +/- {:.3f} (1 std. err.)'\
                 .format(mean(scores), stats.sem(scores)))
-    logger.info('PERFECT GAMES: {:.2f}% +/- {:.2f}pp'
-                .format(100*fraction, 100*std_perfect_games))
+    logger.info('PERFECT GAMES: {:.2f}% +/- {:.2f}pp (1 std. err.)'
+                .format(100*perfect_games, 100*std_perfect_games))
 elif args.verbosity == 'silent': # Still print score for silent single round
     logger.info('Score: ' + str(scores[0]))
