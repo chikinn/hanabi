@@ -11,7 +11,7 @@ Players | %
    4    | 98
    5    | 97
 
-Possible improvements:
+Possible improvements (probably this doesn't actually increase the win percentage):
 - When playing a card, prefer one you don't see in someone else's hand
 - When playing a card, prefer one that allows other players to follow up in the
   same suit
