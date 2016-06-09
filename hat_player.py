@@ -4,8 +4,6 @@ A strategy for 4 or 5 players which uses "hat guessing" to convey information to
 The following table gives the approximate percentages of this strategy reaching maximum score (using 6 suits).
 Players | %
 --------+----
-   2    | ??
-   3    | ??
    4    | ??
    5    | ??
 """
@@ -44,6 +42,8 @@ class HatPlayer:
     def think_out_of_turn(self, me, player, action, r):
         """ self (players[me]) thinks out of turn during the turn of `me`. This function accesses only information known to `me`."""
         n = r.nPlayers
+        if self.last_clued_any_clue == (player - 1) % n:
+            self.last_clued_any_clue = player
         if self.im_clued:
             if self.is_between(player, self.first_clued, self.last_clued):
                 self.clue_value = (self.clue_value - self.action_to_number(action)) % 9
@@ -57,10 +57,7 @@ class HatPlayer:
             target, value = action[1]
             if value == '5':
                 return
-            if self.last_clued_any_clue == (player - 1) % n:
-                self.first_clued = (player + 1) % n
-            else:
-                self.first_clued = (self.last_clued_any_clue + 1) % n
+            self.first_clued = (self.last_clued_any_clue + 1) % n
             self.last_clued = target
             self.last_clued_any_clue = target
             self.clue_value = self.clue_to_number(value)
@@ -122,29 +119,17 @@ class HatPlayer:
             return str(n+1)
         return VANILLA_SUITS[n-4]
 
-    def print_debug(self, r, me):
-        """ print information for debugging purposes at the start of the game."""
-        pass
-        # for i in range(9):
-        #     print str(i) + ', ' + str(self.number_to_clue(i)) + ', ' + str(self.clue_to_number(self.number_to_clue(i)))
-        # for i in range(9):
-        #     print str(i) + ', ' + str(self.number_to_action(i, me, r))
-        # for i in range(4):
-        #     print 'play ' + str(i) + ', ' + str(self.action_to_number(('play',i)))
-        # for i in range(4):
-        #    print 'discard ' + str(i) + ', ' + str(self.action_to_number(('discard',i)))
-        # print 'hint, ' + str(self.action_to_number(('hint', 0)))
-
     def play(self, r):
         me = r.whoseTurn
         n = r.nPlayers
         progress = r.progress
-        # Debugging on the first turn
-        for i in r.NameRecord:
-            if i[:-1] != 'Hat':
-                raise NameError('Hat AI must only play with other hatters')
+        cards = r.h[me].cards
+        # Some first turn initialization
+        if len(r.playHistory) < n:
+            for i in r.NameRecord:
+                if i[:-1] != 'Hat':
+                    raise NameError('Hat AI must only play with other hatters')
         if len(r.playHistory) == 0:
-            self.print_debug(r, me)
             if r.nPlayers <= 3:
                 raise NameError('This AI works only with at least 4 players.')
             for i in range(n):
@@ -158,88 +143,34 @@ class HatPlayer:
             myaction = self.number_to_action(self.clue_value)
             # I'm going to do myaction. The first component is 'hint', 'discard' or 'play' and it happens on card with position 'pos' in my hand.
             # Before I send my move, the other players may think about what this move means
-            self.reset_memory() # forget everything, except who the last clued player is (the only thing actually important to reset is `im_clued` to False
+            self.im_clued = False
             if myaction[0] != 'hint':
                 for i in other_players(me, r):
                     r.PlayerRecord[i].think_out_of_turn(i, me, myaction, r)
-                return myaction[0], r.h[me].cards[myaction[1]]
+                return myaction[0], cards[myaction[1]]
         else:
             assert self.last_clued_any_clue == (me - 1) % n
-        assert r.hints
+        if not r.hints: # this should never happen if the strategy is fully implemented
+            for i in other_players(me, r):
+                r.PlayerRecord[i].think_out_of_turn(i, me, ('discard', 0), r)
+            return 'discard', cards[0]
         # If there is no hint aimed at me, or I was hinted to give a hint myself, then I'm going to give a hint
         target = (me - 1) % n
-        clue = 'r'
-
-
+        if self.last_clued_any_clue == target:
+            self.last_clued_any_clue = me
+        will_be_played = []
+        i = target
+        cluenumber = 0
+        while i != self.last_clued_any_clue:
+            x = self.standard_play(r.h[i].cards, i, will_be_played, r.progress, r.discardpile) # TODO: use different starting point
+            cluenumber = (cluenumber + x) % 9
+            if x < 4:
+                will_be_played.append(r.h[i].cards[x]['name'])
+            i = (i - 1) % n
+        clue = self.number_to_clue(cluenumber)
         # I'm going to clue (target, clue)
         myaction = 'hint', (target, clue)
         self.last_clued_any_clue = target
         for i in other_players(me, r):
             r.PlayerRecord[i].think_out_of_turn(i, me, myaction, r)
         return myaction
-
-
-        # remove all old code below this:
-        cards = r.h[me].cards
-        nextplayer = (me + 1) % r.nPlayers
-
-        # Play a card, if possible (lowest value first)
-        playableCards = get_plays(cards, progress)
-        if playableCards:
-            wanttoplay = find_lowest(playableCards)
-            return 'play', random.choice(wanttoplay)
-
-        # Hint if at maximum hints
-        if r.hints == N_HINTS:
-            return 'hint', (nextplayer, '5')
-        # don't discard in endgame if someone else can play (before you run out of hints)
-        someone_can_play = False
-        for i in other_players(me, r)[0:r.hints]:
-            if get_plays(r.h[i].cards, progress):
-                someone_can_play = True
-        if len(r.deck) < count_unplayed_cards(r, progress) and someone_can_play:
-            assert r.hints > 0
-            return 'hint', (nextplayer, '4')
-        # discard if you can safely discard or if you have no hints
-        badness, discard = self.want_to_discard(cards, me, r, progress)
-        if badness < 10 or r.hints == 0:
-            return 'discard', discard
-        # if someone can play or discard more safely before you run out of hints, give a hint
-        other_badness = []
-        for i in other_players(me, r)[0:r.hints]:
-            if get_plays(r.h[i].cards, progress):
-                other_badness.append(0)
-            else:
-                other_badness.append(self.want_to_discard(r.h[i].cards, i, r, progress)[0])
-        other_badness = other_badness
-        if min(other_badness) < badness:
-            return 'hint', (nextplayer, '3')
-        # discard the highest critical card
-        return 'discard', discard
-
-    def want_to_discard(self, cards, player, r, progress):
-        """Returns a pair (badness, card) where i is a number indicating how bad it is to discard one of the cards for player and card is a card which is least bad to discard.
-        (badness = 0 is used if someone can play a card and doesn't have to discard)
-        badness = 1: discard useless card
-        badness = 2: discard card which is already in some else's hand
-        badness between 10 and 30: discard the first copy of a non-5 card (4s are badness 10, 3s badness 20, 2s badness 30)
-        badness >= 100: discard a necessary card"""
-        discardCards = get_played_cards(cards, progress)
-        if discardCards: # discard a card which is already played
-            return 1, random.choice(discardCards)
-        discardCards = get_duplicate_cards(cards)
-        if discardCards: # discard a card which occurs twice in your hand
-            return 1, random.choice(discardCards)
-        discardCards = get_visible_cards(cards, get_all_visible_cards(player, r))
-        if discardCards: # discard a card which you can see (lowest first)
-            discardCards = find_lowest(discardCards)
-            return 2, random.choice(discardCards)
-        discardCards = get_nonvisible_cards(cards, r.discardpile)
-        discardCards = filter(lambda x: x['name'][0] != '5', discardCards)
-        if discardCards: # discard a card which is not unsafe to discard
-            discardCards = find_highest(discardCards)
-            card = random.choice(discardCards)
-            return 50 - 10 * int(card['name'][0]), card
-        discardCards = find_highest(cards)
-        card = random.choice(discardCards)
-        return 600 - 100 * int(card['name'][0]), card
