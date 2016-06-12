@@ -4,22 +4,20 @@ A strategy for 4 or 5 players which uses "hat guessing" to convey information to
 The following table gives the approximate percentages of this strategy reaching maximum score.
 Players | % (6 suits) | % (5 suits)
 --------+-------------+------------
-   4    |     77      |     82
-   5    |     86      |     77
+   4    |     79      |     84
+   5    |     87      |    79-80
 
-Bugs:
-- Never discard with 8 hints left (clue giver should ensure this)
+Major mistakes:
+- the last 5 should be hinted more flexibly (if player n plays the 4, and the player after it has the 5, players can clue that 5 by giving a play hint even though that doesn't make sense)
 
-Improvements in standard_play: (all improvements are small)
+
+Improvements in standard_play: (all improvements are very small)
 - allow discarding of cards in (some) other players' hands (after clue-receiver and before clue-giver (both strictly))
-- allow discarding of cards in dont_play
 - prefer to play cards which are already discarded
-- if out of clues (on first_clued's turn), prefer to play 5s
-- don't discard in endgame
 
 Improvements in clue giving (to next player):
-- Clue discard (non-critical card) instead of clue if few players can play
-- Clue 'hint' instead of discard near the end of the game, and don't clue everyone
+- Clue easy_discard to next player if (clued plays + possible plays afterwards < 3)
+- Clue 'hint' instead of discard near the end of the game
 
 
 Improvements in other play:
@@ -119,12 +117,20 @@ class HatPlayer:
         assert self == r.PlayerRecord[hinter]
         x = self.standard_play(cards, player, dont_play, progress, decksize, hints, r)
         if x < 4:
+            if self.min_futurehints <= 0 and cards[x]['name'][0] != '5':
+                playablefives = filter(lambda x: x['name'][0] == '5' and x['name'] not in dont_play, get_plays(cards, progress))
+                if playablefives:
+                    if r.verbose:
+                        print 'play a 5 instead'
+                    return cards.index(playablefives[0])
             return x
         if self.max_futurehints >= 8:
             if x < 8 and r.verbose:
                 print 'clue instead'
             return 8
-        if self.min_futurehints <= 0 and x == 8:
+        if (not self.cards_drawn) and self.futuredecksize == len(r.deck) and x == 8 and r.verbose:
+            print 'nobody can play!'
+        if (self.min_futurehints <= 0 or ((not self.cards_drawn) and self.futuredecksize == len(r.deck))) and x == 8:
             y = self.easy_discards(cards, dont_play, progress, r)
             if y:
                 if r.verbose:
@@ -135,6 +141,8 @@ class HatPlayer:
                 if r.verbose:
                     print 'discard instead (ouch)'
                 return y
+            if r.verbose:
+                print 'all cards are critical!', progress
         return x
 
 
@@ -247,7 +255,6 @@ class HatPlayer:
         else:
             self.hint_changes.append(-1)
 
-
     def finalize_future_clue(self, r):
         """When predicting future actions, do this at the end of predicting every clue."""
         for p in self.will_be_played:
@@ -300,25 +307,26 @@ class HatPlayer:
             for i in range(n):
                 r.PlayerRecord[i].reset_memory() # initialize variables which contain the memory of this player. These are updated after every move of any player
                 r.PlayerRecord[i].last_clued_any_clue = n - 1 # the last player clued by any clue, not necessarily the clue which is relevant to me. This must be up to date all the time
-        # lc = []
-        # ic = []
-        # for i in range(n):
-        #     lc.append(r.PlayerRecord[i].last_clued_any_clue)
-        #     ic.append(r.PlayerRecord[i].im_clued)
-        # print lc, ic
         # everyone takes some time to think about the meaning of previously given clues
         for i in range(n):
             r.PlayerRecord[i].interpret_clue(i, r)
         # Is there a clue aimed at me?
         if self.im_clued:
             myaction = self.number_to_action(self.clue_value)
+            if myaction[0] != 'play' and len(r.deck) == 0 and self.later_clues and (not get_plays(get_all_visible_cards(me, r), progress)):
+                print 'I could have been hinted about a card here'
             # I'm going to do myaction. The first component is 'hint', 'discard' or 'play' and it happens on card with position 'pos' in my hand.
             # Before I send my move, the other players may think about what this move means
-            if myaction[0] == 'play' or (myaction[0] == 'discard' and r.hints < N_HINTS):
+            if myaction[0] == 'discard' and r.hints > 1 and self.last_clued_any_clue == me and get_plays(r.h[(me + 1) % n].cards, progress):
+                if r.verbose:
+                    print 'Ignoring my discard hint. Cluing instead.', progress, r.hints
+            elif myaction[0] == 'play' or (myaction[0] == 'discard' and r.hints < N_HINTS):
                 return self.execute_action(myaction, r)
+            if myaction[0] == 'discard' and r.hints == N_HINTS and r.verbose:
+                print 'Cannot discard, max clues'
         else:
             assert self.last_clued_any_clue == (me - 1) % n
-        if not r.hints: # this should never happen if the strategy is fully implemented
+        if not r.hints: # it is quite bad if this happens (but it is quite rare)
             if r.verbose:
                 print "Cannot clue, because there are no available hints"
             return self.execute_action(('discard', 3), r)
