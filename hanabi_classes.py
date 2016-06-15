@@ -19,6 +19,8 @@ VANILLA_SUITS = 'rygbw'
 SUIT_CONTENTS = '1112233445' # must be ascending
 N_HINTS       = 8
 N_LIGHTNING   = 3
+RAINBOW_SUIT  = '?'
+PURPLE_SUIT   = 'p'
 
 class Round:
     """Store round info and interact with AI players.
@@ -52,9 +54,9 @@ class Round:
         self.gameType  = gameType
         self.suits = VANILLA_SUITS
         if gameType == 'rainbow':
-            self.suits += '?'
+            self.suits += RAINBOW_SUIT
         elif gameType == 'purple':
-            self.suits += 'p'
+            self.suits += PURPLE_SUIT
 
         self.nPlayers = len(names)
         self.h = [self.Hand(i, names[i]) for i in range(self.nPlayers)]
