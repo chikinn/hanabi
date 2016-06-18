@@ -40,11 +40,11 @@ class GeneralEncodingPlayer:
         PrintInternal = False
         if PrintInternal:
             if nPriorTurns == 0:
-                print '\n'*10
+                print('\n'*10)
             
-            print ''
+            print('')
             self.PrintInfoMat(self.SelfID)
-            print r.progress
+            print(r.progress)
             time.sleep(0.4)
          
         
@@ -466,17 +466,17 @@ class GeneralEncodingPlayer:
                     S = self.InformationMatrix[i,j,'S']
                     PossibleSet = [m[0] + m[1] for m in list(it.product(N,S))]
                     if r.h[i].cards[j]['name'] not in PossibleSet:
-                        print r.playHistory
-                        print r.DropIndRecord
+                        print(r.playHistory)
+                        print(r.DropIndRecord)
                         for m in range(self.nCards):
-                            print self.InformationMatrix[i,m,'N'],
-                            print self.InformationMatrix[i,m,'S'],
-                            print ' ' * 10,
-                        print ''
+                            print(self.InformationMatrix[i,m,'N'],)
+                            print(self.InformationMatrix[i,m,'S'],)
+                            print(' ' * 10,)
+                        print('')
                         for m in range(self.nCards):
-                            print r.h[i].cards[m]['name'],
-                            print ' ' * 10,
-                        print ''
+                            print(r.h[i].cards[m]['name'],)
+                            print(' ' * 10,)
+                        print('')
                         raise NameError('Error detected in the information matrix')
             
     def ExpandCode(self,Code):
@@ -878,9 +878,9 @@ class GeneralEncodingPlayer:
             SStrLenList.append(SStrLen)
         for i in playerRange:
             for j in range(self.nCards):
-                print (str(S[i][j]) + ' '*(SStrLenList[j] - len(S[i][j])) + 
-                       str(N[i][j]) + ' '*(NStrLenList[j] + 5 - len(N[i][j]))),
-            print ''
+                print((str(S[i][j]) + ' '*(SStrLenList[j] - len(S[i][j])) + 
+                       str(N[i][j]) + ' '*(NStrLenList[j] + 5 - len(N[i][j]))),)
+            print('')
 
         
         

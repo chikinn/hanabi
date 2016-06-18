@@ -12,12 +12,12 @@ Command-line arguments (see usage):
   loss_score: Whether to award points after a game is lost
 """
 
-import sys, argparse, logging
+import sys, argparse, logging, random
 from time import gmtime, strftime
 from scipy import stats, mean
 from play_hanabi import play_one_round
 from hanabi_classes import SUIT_CONTENTS
-import random
+
 ### TODO: IMPORT YOUR PLAYER
 from cheating_idiot_player import CheatingIdiotPlayer
 from cheating_player import CheatingPlayer
@@ -27,10 +27,9 @@ from newest_card_player import NewestCardPlayer
 from human_player import HumanPlayer
 from EncodingPlayer import EncodingPlayer
 from GeneralEncoding import GeneralEncodingPlayer
-### TODO: IMPORT YOUR PLAYER
 
-# Define all available players.  TODO: ADD YOURS
-availablePlayers = {'cheater'   : CheatingIdiotPlayer,
+# Define all available players.
+availablePlayers = {'cheater'   : CheatingIdiotPlayer, ### TODO: ADD YOURS
                     'smart_cheater' : CheatingPlayer,
                     'basic'     : MostBasicPlayer,
                     'brainbow'  : BasicRainbowPlayer,
@@ -65,6 +64,8 @@ assert args.loss_score in ('zero', 'full')
 players = []
 rawNames = args.requiredPlayers + args.morePlayers
 for i in range(len(rawNames)):
+    print(rawNames[i])
+    print(availablePlayers)
     assert rawNames[i] in availablePlayers
     players.append(availablePlayers[rawNames[i]]())
     rawNames[i] = rawNames[i].capitalize()

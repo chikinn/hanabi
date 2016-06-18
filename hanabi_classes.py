@@ -83,7 +83,7 @@ class Round:
 
         # This provides a shared starting seed if players wish to use fixed
         # seed psudo RNG methods.
-        self.CommonSeed = random.randint(0,sys.maxint)
+        self.CommonSeed = random.randint(0,sys.maxsize)
 
         if not len(self.logger.handlers):
             # Define logging handlers if not defined by wrapper script
