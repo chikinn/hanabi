@@ -3,6 +3,8 @@
 Feel free to add to this file.  If a function is so specific that only one bot
 will use it, however, then it doesn't belong here."""
 
+from hanabi_classes import *
+
 def get_plays(cards, progress):
     """Return a list of plays (subset of input); call only on visible cards!"""
     plays = []
@@ -38,3 +40,16 @@ def deduce_plays(cards, progress, suits):
             plays.append(card)
 
     return plays
+
+def possibly_playable(card, progress, suits):
+    """Check if it is possible with current knowledge that card is playable"""
+    playables = [str(value+1) + suit for suit, value in progress.items()
+            if value < 5]
+    ret = [name for name in playables
+            if (all(matches(name, hint) for hint in card['direct']) and not
+                any(matches(name, hint) for hint in card['indirect']))]
+    return ret
+
+def matches(name, hint):
+    return (hint in name or (hint in VANILLA_SUITS and RAINBOW_SUIT in name))
+

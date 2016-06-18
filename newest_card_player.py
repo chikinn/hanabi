@@ -9,7 +9,7 @@ about to be discarded, or playing all 1s from starting round hints.
 """
 
 from hanabi_classes import *
-from bot_utils import get_plays, deduce_plays
+from bot_utils import *
 
 class NewestCardPlayer:
 
@@ -23,21 +23,21 @@ class NewestCardPlayer:
 
     # find the newest card in another player's hand which info targets
     def get_newest_hinted(self, cards, info):
-        hinted = [card for card in cards if info in card['name']
-                or (info in 'rygbw' and '?' in card['name'])]
+        hinted = [card for card in cards if matches(card['name'], info)]
         if hinted:
             return max(hinted, key=lambda card: card['time'])
 
     def possible_hints(self, name):
-        if '?' not in name:
-            return name
+        if '?' in name:
+            return name[0] + VANILLA_SUITS
         else:
-            return name[0] + 'rygbw'
+            return name
 
-    # pick a card to discard, let's go with the oldest
-    # smarter players might not discard known fives...
+    # discard the oldest card which isn't a known five.  Unless all are fives.
     def get_discard(self, cards):
-        return min(cards, key=lambda card: card['time'])
+      nonFives = [card for card in cards if '5' not in card['direct']]
+      return min(nonFives if nonFives else cards,
+              key=lambda card: card['time'])
 
     def play(self, r):
         me = r.whoseTurn
@@ -60,8 +60,8 @@ class NewestCardPlayer:
                 hintee = (target - me + r.nPlayers) % r.nPlayers
                 if target == me:
                     play = self.get_my_newest_hinted(cards, info)
-                    if play:
-                      return 'play', play
+                    if play and possibly_playable(play, r.progress, r.suits):
+                            return 'play', play
                 elif hintee < hinterPosition: # hintee hasn't yet played
                     targetCard = self.get_newest_hinted(r.h[target].cards, info)
                     if targetCard:
