@@ -136,6 +136,8 @@ class HumanPlayer:
         if r.hints > 0:
             mainOptions['3'] = 'Give hint to player'
 
+        mainOptions['4'] = 'View remaining cards'
+
         cardOptions = {}
         for i in range(nCards):
             cardOptions[str(i + 1)] = 'Card ' + str(i + 1)
@@ -161,7 +163,7 @@ class HumanPlayer:
                     print()
                     return playType, cards[int(choice)-1]
 
-            if action == '3': # Give hints
+            elif action == '3': # Give hints
                 #List out players, choose player, choose clue to give
                 playerOptions = self.getPlayerHands(r)
 
@@ -175,7 +177,26 @@ class HumanPlayer:
                     'Enter suit or value for the hint (or type x to go back)')
 
                 hint = self.getInput(zazzIndent,
-                                        r.suits.replace('?', '') + '12345x')
+                      list(r.suits.replace('?', '') + '12345x'))
                 if hint != 'x':
                     return 'hint', (playerOptions[hintTarget][0], hint)
+            elif action == '4': # sort through discards and display nicely
+                print(zazzIndent, 'Cards which have been neither discarded nor played:')
+                print(zazzIndent, '   ' + SUIT_CONTENTS)
+                usedCards = {suit : '' for suit in r.suits}
+                discards = sorted(r.discardpile)
+                for card in discards:
+                    usedCards[card[1]] += card[0]
+                for suit in r.suits:
+                    i = 0
+                    output = ''
+                    for value in SUIT_CONTENTS:
+                        if i < len(usedCards[suit]) and usedCards[suit][i] == value:
+                            output += ' '
+                            i += 1
+                        else:
+                            output += value
+                    print(zazzIndent, suit + ': ' + output)
+                print()
+
 #Nothing here.
