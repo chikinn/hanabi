@@ -16,16 +16,20 @@ from __future__ import print_function
 # Note: use of print instead of logging is intentional - don't want the menu
 #       for the player to clutter up the game log!
 from hanabi_classes import *
-import os
+import os, sys
+
+PYTHON_VERSION = sys.version_info
+
+def compatible_input(message, pythonVersion=PYTHON_VERSION):
+    if pythonVersion >= (3, 0):
+        return input(message)
+    else:
+        return raw_input(message)
 
 class HumanPlayer:
     def getInput(self, zazzIndent, validInput):
         while True:
-            try:
-               input = raw_input #Python 2.x compatibility
-            except NameError:
-               pass
-            userInput = raw_input(zazzIndent + ' Please select: ')
+            userInput = compatible_input(zazzIndent + ' Please select: ')
 
             if userInput in validInput:
                 return userInput
