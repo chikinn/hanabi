@@ -30,18 +30,38 @@ class HumanPlayer:
             if userInput in validInput:
                 return userInput
             else:
-                print(zazzIndent, 'Please enter one of', ', '.join(validInput))
+                print(zazzIndent, 'Please enter one of',
+                    ', '.join(sorted(validInput)))
 
     def showMyCardInfo(self, zazzIndent, cards):
         for i in range(len(cards)):
-            direct = ('is ' + ''.join(cards[i]['direct'])) \
-                                    if len(cards[i]['direct']) > 0\
-                                            else 'is unknown'
-            indirect = ('but is not ' + ''.join(cards[i]['indirect']))\
-                                    if len(cards[i]['indirect']) > 0\
-                                            else \
-                                            'and has no indirect info'
+            direct = ('is ' + ''.join(self.positiveInfo(cards[i]))) \
+                    if cards[i]['direct'] else 'is unknown'
+            negatives = self.negativeInfo(cards[i])
+            indirect = ('but is not ' + ''.join(negatives))\
+                    if negatives else 'and has no indirect info'
             print(zazzIndent, 'Card', str(i + 1), direct, indirect)
+
+    # process hint info for human display.
+    # ('b', 'b', '1') should display as just "1b"
+    # ('b', '1', 'r') should display as just "1?"
+    def positiveInfo(self, card):
+        number = [h for h in card['direct'] if h in '12345']
+        color = sorted(set([h for h in card['direct'] if h not in '12345']))
+        info = ''
+        if number:
+            info = number[0]
+        if color:
+            if len(color) > 1:
+                info += RAINBOW_SUIT
+            else:
+                info += color[0]
+        return info
+
+    # possible future improvement: don't say card isn't '14' if also known '2'
+    # doing the same for colors requires a little care about rainbow, however
+    def negativeInfo(self, card):
+        return sorted(set(card['indirect']))
 
     def showTurns(self, zazzIndent, r):
         i = r.nPlayers - len(r.playHistory[-(r.nPlayers):])
@@ -116,6 +136,8 @@ class HumanPlayer:
         if r.hints > 0:
             mainOptions['3'] = 'Give hint to player'
 
+        mainOptions['4'] = 'View remaining cards'
+
         cardOptions = {}
         for i in range(nCards):
             cardOptions[str(i + 1)] = 'Card ' + str(i + 1)
@@ -141,7 +163,7 @@ class HumanPlayer:
                     print()
                     return playType, cards[int(choice)-1]
 
-            if action == '3': # Give hints
+            elif action == '3': # Give hints
                 #List out players, choose player, choose clue to give
                 playerOptions = self.getPlayerHands(r)
 
@@ -155,7 +177,26 @@ class HumanPlayer:
                     'Enter suit or value for the hint (or type x to go back)')
 
                 hint = self.getInput(zazzIndent,
-                                        r.suits.replace('?', '') + '12345x')
+                      list(r.suits.replace('?', '') + '12345x'))
                 if hint != 'x':
                     return 'hint', (playerOptions[hintTarget][0], hint)
+            elif action == '4': # sort through discards and display nicely
+                print(zazzIndent, 'Cards which have been neither discarded nor played:')
+                print(zazzIndent, '   ' + SUIT_CONTENTS)
+                usedCards = {suit : '' for suit in r.suits}
+                discards = sorted(r.discardpile)
+                for card in discards:
+                    usedCards[card[1]] += card[0]
+                for suit in r.suits:
+                    i = 0
+                    output = ''
+                    for value in SUIT_CONTENTS:
+                        if i < len(usedCards[suit]) and usedCards[suit][i] == value:
+                            output += ' '
+                            i += 1
+                        else:
+                            output += value
+                    print(zazzIndent, suit + ': ' + output)
+                print()
+
 #Nothing here.
