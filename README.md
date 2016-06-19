@@ -1,16 +1,18 @@
 # Hanabi
 #### Robert B. Kaspar, rbkaspar@gmail.com
 
+All contributors welcome.  Please maintain compatibility with both Python 2 and
+Python 3.
+
 ## Usage
     usage: ./hanabi_wrapper.py p1 p2 [p3 ...] [-t game_type] [-n n_rounds] [-v verbosity] [-l loss_score]
-      pi (AI for player i): cheater, smart_cheater, basic, brainbow, newest, or human
+      pi (AI for player i): idiot, cheater, basic, brainbow, newest, encoding, gencoding, or human
       game_type: rainbow [default], purple, or vanilla
       n_rounds: positive int [default: 1]
       verbosity: verbose [default], scores, silent, or log
       loss_score (points to award after 3 guesses): zero [default] or full
 
-There is no max number of players.  With more than 5, the hand size is still 4
-cards.
+There is no max number of players.  With >5, hand size is still 4 cards.
 
 ## Example usage
     $ ./hanabi_wrapper.py newest newest newest newest
@@ -36,22 +38,24 @@ or
             Newest1 [4y 2w 1? 1g] hints 3 to Newest3
             Newest2 [2y 4y 1? 1w] discards 2y
     Score: 25
-
 or
 
-    AVERAGE SCORE (+/- 1 std. err.): 23.54 +/- 0.09
+    AVERAGE SCORE: 29.81 +/- 0.02 (1 std. err.)
+    PERFECT GAMES: 88.6%
 
 ## Available players
-* **Cheating Idiot** (`cheater`) by RK<br>
+* **Cheating Idiot** (`idiot`) by RK<br>
   Peeks at own hand to know when to play, discards randomly, never hints
-* **Cheating Player** (`smart_cheater`) by Floris van Doorn<br>
-  Peeks at own hand and decide what to play, discard. Gives a clue if it doesn't want to discard.
+* **Cheating** (`cheater`) by Floris van Doorn<br>
+  Peeks at own hand to play, discard, and hint; high win rate
 * **Most Basic** (`basic`) by Ben Zax<br>
   Plays when certain, discards randomly, hints inefficiently, no rainbows
 * **Basic Rainbow** (`brainbow`) by Greg Hutchings<br>
   Like `basic` but checks direct and indirect info to handle rainbows
 * **Newest Card** (`newest`) by BZ<br>
   Plays newest hinted card (and hints accordingly), discards oldest card
+* **Encoding** (`encoder`) & **General Encoding** (`gencoder`) by Taylor Robie
+  Experimental, hints counter-intuitively, Python 2 only (todo: 3!)
 * **Human** (`human`) by GH<br>
   Allows you to play alongside the AIs (works best on `-v silent` or `log`)
 

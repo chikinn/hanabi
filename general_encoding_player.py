@@ -8,10 +8,7 @@ Created on Sun May 08 12:57:34 2016
 from copy import deepcopy as c
 import itertools as it
 import numpy as np
-import random
-import re
-import sys
-import time
+import random, re, sys, time
 
 class GeneralEncodingPlayer:
     def __init__(self):
@@ -717,7 +714,7 @@ class GeneralEncodingPlayer:
             raise NameError('Encoding AI requires vanilla suits\n')
             
         for i in r.NameRecord:
-            if i.split('_')[0] != 'Genencode':
+            if i[:-1] != 'Gencoder':
                 raise NameError('Encoding AI must only play with other' + 
                                 ' encoders')                                
         self.InitializeConstants(r)

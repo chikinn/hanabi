@@ -25,18 +25,18 @@ from most_basic_player import MostBasicPlayer
 from basic_rainbow_player import BasicRainbowPlayer
 from newest_card_player import NewestCardPlayer
 from human_player import HumanPlayer
-from EncodingPlayer import EncodingPlayer
-from GeneralEncoding import GeneralEncodingPlayer
+from encoding_player import EncodingPlayer
+from general_encoding_player import GeneralEncodingPlayer
 
 # Define all available players.
-availablePlayers = {'cheater'   : CheatingIdiotPlayer, ### TODO: ADD YOURS
-                    'smart_cheater' : CheatingPlayer,
-                    'basic'     : MostBasicPlayer,
-                    'brainbow'  : BasicRainbowPlayer,
-                    'newest'    : NewestCardPlayer,
-                    'human'     : HumanPlayer,
-                    'encoding_' : EncodingPlayer,
-                    'genencode_': GeneralEncodingPlayer}
+availablePlayers = {'idiot'   : CheatingIdiotPlayer, ### TODO: ADD YOURS
+                    'cheater' : CheatingPlayer,
+                    'basic'   : MostBasicPlayer,
+                    'brainbow': BasicRainbowPlayer,
+                    'newest'  : NewestCardPlayer,
+                    'human'   : HumanPlayer,
+                    'encoder' : EncodingPlayer,
+                    'gencoder': GeneralEncodingPlayer}
 
 # Parse command-line args.
 parser = argparse.ArgumentParser(description='Process some integers.')
@@ -64,8 +64,6 @@ assert args.loss_score in ('zero', 'full')
 players = []
 rawNames = args.requiredPlayers + args.morePlayers
 for i in range(len(rawNames)):
-    print(rawNames[i])
-    print(availablePlayers)
     assert rawNames[i] in availablePlayers
     players.append(availablePlayers[rawNames[i]]())
     rawNames[i] = rawNames[i].capitalize()
@@ -125,8 +123,9 @@ if args.verbosity != 'silent':
 if len(scores) > 1: # Only print stats if there were multiple rounds.
     max_score = int(SUIT_CONTENTS[-1]) * (5 if args.game_type == 'vanilla' else 6)
     count_max = scores.count(max_score)
-    logger.info('AVERAGE SCORE (+/- 1 std. err.): {} +/- {} ({}% maximal score)'\
-                .format(str(mean(scores))[:5], str(stats.sem(scores))[:4],
-                        str(100*count_max/ float(len(scores)))[:4]))
+    logger.info('AVERAGE SCORE: {} +/- {} (1 std. err.)'\
+                .format(str(mean(scores))[:5], str(stats.sem(scores))[:4]))
+    logger.info('PERFECT GAMES: {}%'
+                .format(str(100*count_max/ float(len(scores)))[:4]))
 elif args.verbosity == 'silent': # Still print score for silent single round
     logger.info('Score: ' + str(scores[0]))

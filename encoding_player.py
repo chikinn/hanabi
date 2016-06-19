@@ -62,7 +62,8 @@ class EncodingPlayer:
         if r.suits != 'rygbw':
             raise NameError('Encoding AI requires vanilla suits\n')
         for i in r.NameRecord:
-            if i.split('_')[0] != 'Encoding':
+            print(i)
+            if i[:-1] != 'Encoder':
                 raise NameError('Encoding AI must only play with other encoders')
         if r.nPlayers != 5:
             raise NameError('Encoding AI must play in a 5 player game')
