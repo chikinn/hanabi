@@ -93,7 +93,7 @@ class HatPlayer:
         """
         assert self != r.PlayerRecord[me] # this is never called on a player's own hand, so `self` can look at the hand of "me"
         # Do I want to play?
-        playableCards = filter(lambda x: x['name'] not in dont_play, get_plays(cards, progress))
+        playableCards = list(filter(lambda x: x['name'] not in dont_play, get_plays(cards, progress)))
         if playableCards:
             wanttoplay = find_lowest(playableCards)[0]
             return cards.index(wanttoplay)
@@ -118,31 +118,31 @@ class HatPlayer:
         x = self.standard_play(cards, player, dont_play, progress, decksize, hints, r)
         if x < 4:
             if self.min_futurehints <= 0 and cards[x]['name'][0] != '5':
-                playablefives = filter(lambda x: x['name'][0] == '5' and x['name'] not in dont_play, get_plays(cards, progress))
+                playablefives = list(filter(lambda x: x['name'][0] == '5' and x['name'] not in dont_play, get_plays(cards, progress)))
                 if playablefives:
                     if r.verbose:
-                        print 'play a 5 instead'
+                        print('play a 5 instead')
                     return cards.index(playablefives[0])
             return x
         if self.max_futurehints >= 8:
             if x < 8 and r.verbose:
-                print 'clue instead'
+                print('clue instead')
             return 8
         if (not self.cards_drawn) and self.futuredecksize == len(r.deck) and x == 8 and r.verbose:
-            print 'nobody can play!'
+            print('nobody can play!')
         if (self.min_futurehints <= 0 or ((not self.cards_drawn) and self.futuredecksize == len(r.deck))) and x == 8:
             y = self.easy_discards(cards, dont_play, progress, r)
             if y:
                 if r.verbose:
-                    print 'discard instead'
+                    print('discard instead')
                 return y
             y = self.hard_discards(cards, dont_play, progress, r)
             if y:
                 if r.verbose:
-                    print 'discard instead (ouch)'
+                    print('discard instead (ouch)')
                 return y
             if r.verbose:
-                print 'all cards are critical!', progress
+                print('all cards are critical!', progress)
         return x
 
 
@@ -155,7 +155,7 @@ class HatPlayer:
         discardCards = get_duplicate_cards(cards)
         if discardCards: # discard a card which occurs twice in your hand
             return cards.index(discardCards[0]) + 4
-        discardCards = filter(lambda x: x['name'] in dont_play, cards)
+        discardCards = list(filter(lambda x: x['name'] in dont_play, cards))
         if discardCards: # discard a card which will be played by this clue
             return cards.index(discardCards[0]) + 4
         # Otherwise clue
@@ -164,7 +164,7 @@ class HatPlayer:
     def hard_discards(self, cards, dont_play, progress, r):
         """Find the least bad card to discard"""
         discardCards = get_nonvisible_cards(cards, r.discardpile + self.futurediscarded)
-        discardCards = filter(lambda x: x['name'][0] != '5', discardCards)
+        discardCards = list(filter(lambda x: x['name'][0] != '5', discardCards))
         assert all(map(lambda x: x['name'][0] != '1', discardCards))
         if discardCards: # discard a card which is not unsafe to discard
             discardCards = find_highest(discardCards)
@@ -195,7 +195,7 @@ class HatPlayer:
         """Returns number corresponding to a clue. Returns -1 on clues not matching the pattern"""
         if clue == '5':
             if r.verbose:
-                print "Invalid clue received"
+                print("Invalid clue received")
             return -1
         if clue in '1234':
             return int(clue) - 1
@@ -216,11 +216,11 @@ class HatPlayer:
         for i in other_players(me, r):
             r.PlayerRecord[i].think_out_of_turn(i, me, myaction, r)
         if myaction[0] == 'discard' and r.hints == 8 and r.verbose:
-            print "Cheating! Discarding with 8 available hints"
+            print("Cheating! Discarding with 8 available hints")
         if myaction[0] == 'discard' and 0 < len(r.deck) < count_unplayed_playable_cards(r, r.progress) and r.verbose:
-            print "Discarding in endgame"
+            print("Discarding in endgame")
         if myaction[0] == 'play' and r.hints == 8 and cards[myaction[1]]['name'][0] == '5' and r.verbose:
-            print "Wasting a clue"
+            print("Wasting a clue")
         if myaction[0] == 'hint':
             return myaction
         else:
@@ -271,8 +271,8 @@ class HatPlayer:
                 if self.futurehints == 8:
                     self.max_futurehints = 9
                     if r.verbose:
-                        print 'Someone will not be able to discard. (now', r.hints, 'hints). Also deck will be', self.futuredecksize,\
-                            '- hints', self.futurehints, '- progress', self.futureprogress
+                        print('Someone will not be able to discard. (now', r.hints, 'hints). Also deck will be', self.futuredecksize,\
+                            '- hints', self.futurehints, '- progress', self.futureprogress)
                 else:
                     self.futurehints += 1
                     self.max_futurehints = max(self.futurehints, self.max_futurehints)
@@ -283,13 +283,13 @@ class HatPlayer:
                 if self.futurehints < 0:
                     self.futurehints = 1
                     if r.verbose:
-                        print 'Someone will not be able to clue. (now', r.hints, 'hints). Also deck will be', self.futuredecksize,\
-                            '- hints', self.futurehints, '- progress', self.futureprogress, self.min_futurehints
+                        print('Someone will not be able to clue. (now', r.hints, 'hints). Also deck will be', self.futuredecksize,\
+                            '- hints', self.futurehints, '- progress', self.futureprogress, self.min_futurehints)
                 if self.futurehints > 8:
                     self.futurehints = 8
                     if r.verbose:
-                        print 'A hint will be wasted. (now', r.hints, 'hints). Also deck will be', self.futuredecksize,\
-                            '- hints', self.futurehints, '- progress', self.futureprogress
+                        print('A hint will be wasted. (now', r.hints, 'hints). Also deck will be', self.futuredecksize,\
+                            '- hints', self.futurehints, '- progress', self.futureprogress)
 
     def play(self, r):
         me = r.whoseTurn
@@ -313,22 +313,23 @@ class HatPlayer:
         # Is there a clue aimed at me?
         if self.im_clued:
             myaction = self.number_to_action(self.clue_value)
-            if myaction[0] != 'play' and len(r.deck) == 0 and self.later_clues and (not get_plays(get_all_visible_cards(me, r), progress)):
-                print 'I could have been hinted about a card here'
+            if myaction[0] != 'play' and len(r.deck) == 0 and self.later_clues and (not get_plays(get_all_visible_cards(me, r), progress)) and count_unplayed_playable_cards(r, progress):
+                print('I could have been hinted about a card here',
+                    count_unplayed_cards(r, progress))
             # I'm going to do myaction. The first component is 'hint', 'discard' or 'play' and it happens on card with position 'pos' in my hand.
             # Before I send my move, the other players may think about what this move means
             if myaction[0] == 'discard' and r.hints > 1 and self.last_clued_any_clue == me and get_plays(r.h[(me + 1) % n].cards, progress):
                 if r.verbose:
-                    print 'Ignoring my discard hint. Cluing instead.', progress, r.hints
+                    print('Ignoring my discard hint. Cluing instead.', progress, r.hints)
             elif myaction[0] == 'play' or (myaction[0] == 'discard' and r.hints < N_HINTS):
                 return self.execute_action(myaction, r)
             if myaction[0] == 'discard' and r.hints == N_HINTS and r.verbose:
-                print 'Cannot discard, max clues'
+                print('Cannot discard, max clues')
         else:
             assert self.last_clued_any_clue == (me - 1) % n
         if not r.hints: # it is quite bad if this happens (but it is quite rare)
             if r.verbose:
-                print "Cannot clue, because there are no available hints"
+                print("Cannot clue, because there are no available hints")
             return self.execute_action(('discard', 3), r)
 
         # If there is no hint aimed at me, or I was hinted to give a hint myself, then I'm going to give a hint
