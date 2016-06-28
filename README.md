@@ -6,7 +6,7 @@ Python 3.
 
 ## Usage
     usage: ./hanabi_wrapper.py p1 p2 [p3 ...] [-t game_type] [-n n_rounds] [-v verbosity] [-l loss_score]
-      pi (AI for player i): idiot, cheater, basic, brainbow, newest, encoding, gencoding, hat, or human
+      pi (AI for player i): idiot, cheater, basic, brainbow, newest, encoder, gencoder, hat, or human
       game_type: rainbow [default], purple, or vanilla
       n_rounds: positive int [default: 1]
       verbosity: verbose [default], scores, silent, or log
