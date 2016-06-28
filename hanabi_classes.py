@@ -49,7 +49,7 @@ class Round:
     discardpile: list of (names of) cards which are discarded
     """
 
-    def __init__(self, gameType, names, verbosity):
+    def __init__(self, gameType, players, names, verbosity):
         """Instantiate a Round and its Hand sub-objects."""
         self.gameType  = gameType
         self.suits = VANILLA_SUITS
@@ -79,6 +79,7 @@ class Round:
         self.logger = logging.getLogger('game_log')
 
         self.NameRecord = names # Added so that AI can check what players it is playing with
+        self.PlayerRecord = players
         self.DropIndRecord = [] # Keeps track of the index of the dropped card
         self.Resign = False
         self.discardpile = []
