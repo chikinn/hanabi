@@ -27,12 +27,6 @@ class NewestCardPlayer:
         if hinted:
             return max(hinted, key=lambda card: card['time'])
 
-    def possible_hints(self, name):
-        if '?' in name:
-            return name[0] + VANILLA_SUITS
-        else:
-            return name
-
     # discard the oldest card which isn't a known five.  Unless all are fives.
     def get_discard(self, cards):
       nonFives = [card for card in cards if '5' not in card['direct']]
@@ -61,7 +55,7 @@ class NewestCardPlayer:
                 if target == me:
                     play = self.get_my_newest_hinted(cards, info)
                     if play and possibly_playable(play, r.progress, r.suits):
-                            return 'play', play
+                        return 'play', play
                 elif hintee < hinterPosition: # hintee hasn't yet played
                     targetCard = self.get_newest_hinted(r.h[target].cards, info)
                     if targetCard:
@@ -90,10 +84,9 @@ class NewestCardPlayer:
                 if playableCards != []:
                     for card in playableCards:
                         # is there a hint for which this card is the newest?
-                        for info in self.possible_hints(card['name']):
+                        for info in possible_hints(card):
                             if card == self.get_newest_hinted(othersCards, info):
                                 return 'hint', (i, info)
-
 
         # alright, don't know what to do, let's toss
         return 'discard', self.get_discard(cards)

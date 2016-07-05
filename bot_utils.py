@@ -7,14 +7,18 @@ from hanabi_classes import *
 
 def get_plays(cards, progress):
     """Return a list of plays (subset of input); call only on visible cards!"""
-    return list(filter\
-            (lambda x: int (x['name'][0]) == progress[x['name'][1]] + 1, cards))
+    return [card for card in cards if is_playable(card, progress)]
+            
+def is_playable(card, progress):
+    return progress[card['name'][1]] + 1 == int(card['name'][0])
 
 def get_played_cards(cards, progress):
     """Return the sublist of already played cards;
     call only on visible cards!"""
-    return list(filter\
-            (lambda x: int (x['name'][0]) <= progress[x['name'][1]], cards))
+    return [card for card in cards if has_been_played(card, progress)]
+
+def has_been_played(card, progress):
+    return progress[card['name'][1]] >= int(card['name'][0])
 
 def get_duplicate_cards(cards):
     """Return the sublist of duplicate cards; call only on visible cards!"""
@@ -31,6 +35,10 @@ def get_nonvisible_cards(cards1, names2):
     """Return a list of cards that are in cards1 but not names2; call only on
     visible cards!"""
     return list(filter(lambda x: x['name'] not in names2, cards1))
+
+def possible_hints(card):
+    name = card['name']
+    return name[0] + VANILLA_SUITS if RAINBOW_SUIT in name else name
 
 def find_max(f, lst):
     """Returns sublist of lst with all members x where f(x) is maximal"""
