@@ -12,7 +12,7 @@ Major mistakes:
 - the last 5 should be hinted more flexibly (if player n plays the 4, and the
 player after it has the 5, players can clue that 5 by giving a play hint even
 though that doesn't make sense)
-- Giving hints which will instruct a player to hint without hints
+- Giving hints which will instruct a player to hint when there are no hints left
 
 Improvements in standard_play: (all improvements are very small)
 - allow discarding of cards in (some) other players' hands (after clue-receiver
@@ -24,8 +24,7 @@ Improvements in clue giving (to next player):
     (clued plays + possible plays afterwards) < 3
 - Clue 'hint' instead of discard near the end of the game
 
-
-Improvements in other play:
+Other Improvements:
 If I have a discard action and no other players are clued: decide whether it is
 better to clue (complicated to implement, and probably not really better)
 """
@@ -63,6 +62,7 @@ class HatPlayer(AIPlayer):
         """ self (players[me]) interprets a given clue to him. This is done at
         the start of the turn of the player who was first targeted by this clue.
         This function accesses only information known to `me`."""
+        assert self == r.PlayerRecord[me]
         if not (self.im_clued and self.first_clued == r.whoseTurn):
             return
         n = r.nPlayers
@@ -81,6 +81,7 @@ class HatPlayer(AIPlayer):
     def think_out_of_turn(self, me, player, action, r):
         """ self (players[me]) thinks out of turn during the turn of `me`.
         This function accesses only information known to `me`."""
+        assert self == r.PlayerRecord[me]
         n = r.nPlayers
         # The following happens if n-1 players in a row don't clue
         if self.last_clued_any_clue == (player - 1) % n:
@@ -126,7 +127,7 @@ class HatPlayer(AIPlayer):
             wanttoplay = find_lowest(playableCards)
             return cards.index(wanttoplay)
         # Do we have plenty of clues?
-        if hints > 5:
+        if hints >= 6:
             return 8
         # Is the deck nearly out?
         if decksize - (hints - 1) / 3 < count_unplayed_cards(r, progress):
@@ -367,8 +368,8 @@ class HatPlayer(AIPlayer):
         cards = r.h[me].cards
         # Some first turn initialization
         if len(r.playHistory) < n:
-            for i in r.NameRecord:
-                if i[:-1] != 'Hat':
+            for p in r.PlayerRecord:
+                if p.__class__.__name__ != 'HatPlayer':
                     raise NameError('Hat AI must only play with other hatters')
         if len(r.playHistory) == 0:
             if r.nPlayers <= 3:
@@ -396,10 +397,7 @@ class HatPlayer(AIPlayer):
                count_unplayed_playable_cards(r, progress) and r.verbose:
                 print('I could have been hinted about a card here',
                     count_unplayed_cards(r, progress))
-            # I'm going to do myaction. The first component is 'hint', 'discard'
-            # or 'play' and it happens on card with position 'pos' in my hand.
-            # Before I send my move, the other players may think about what
-            # this move means
+            # Sometimes I'm instructed to discard, but it's better to hint
             if myaction[0] == 'discard' and r.hints > 1 and\
                self.last_clued_any_clue == me and\
                get_plays(r.h[(me + 1) % n].cards, progress):
@@ -408,24 +406,27 @@ class HatPlayer(AIPlayer):
                           progress, r.hints)
             elif myaction[0] == 'play' or\
                  (myaction[0] == 'discard' and r.hints < N_HINTS):
+                # I'm going to do myaction. The first component is 'hint',
+                # 'discard' or 'play' and it happens on card with position
+                # 'pos' in my hand.  Before I send my move, the other players
+                # may think about what this move means
                 return self.execute_action(myaction, r)
             if myaction[0] == 'discard' and r.hints == N_HINTS and r.verbose:
                 print('Cannot discard, max clues')
         else:
             assert self.last_clued_any_clue == (me - 1) % n
-        if not r.hints: # it is quite bad if this happens (but it is not common)
+        # If I reach this point in the code, I want to hint
+        if not r.hints: # I cannot hint without clues (this is quite rare)
             if r.verbose:
                 print("Cannot clue, because there are no available hints")
             return self.execute_action(('discard', 3), r)
-
-        # If there is no hint aimed at me, or I was hinted to give a hint
-        # myself, then I'm going to give a hint
-        if self.last_clued_any_clue == (me - 1) % n:
-            self.last_clued_any_clue = me
+        # I'm going to hint
         # Before I clue I have to figure out what will happen after my turn
         # because of clues given earlier.
         # The first step is to predict what will happen because of the clue
         # given to me?
+        if self.last_clued_any_clue == (me - 1) % n:
+            self.last_clued_any_clue = me
         self.initialize_future_prediction(1, r)
         self.initialize_future_clue(r)
         i = self.last_clued
@@ -449,7 +450,7 @@ class HatPlayer(AIPlayer):
             self.finalize_future_clue(r)
             first_target = (last_target + 1) % n
 
-        # What should I clue?
+        # Now I should determine what I'm going to clue
         cluenumber = 0
         self.initialize_future_clue(r)
         target = (me - 1) % n
@@ -467,8 +468,6 @@ class HatPlayer(AIPlayer):
         x = self.modified_play(r.h[i].cards, me, i, self.will_be_played,\
                 self.futureprogress, self.futuredecksize, self.futurehints, r)
         cluenumber = (cluenumber + x) % 9
-
-
         clue = self.number_to_clue(cluenumber)
         # I'm going to clue (target, clue)
         myaction = 'hint', (target, clue)
