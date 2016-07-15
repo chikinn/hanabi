@@ -1,32 +1,14 @@
 """A smart hat guessing Hanabi player.
 
 A strategy for 4 or 5 players which uses "hat guessing" to convey information
-to all other players with a single clue. The following table gives the
-approximate percentages of this strategy reaching maximum score.
+to all other players with a single clue. See doc_hat_player.md for a detailed
+description of the strategy. The following table gives the approximate
+percentages of this strategy reaching maximum score.
 Players | % (6 suits) | % (5 suits)
 --------+-------------+------------
    4    |     79      |     84
    5    |     87      |    79-80
 
-Major mistakes:
-- the last 5 should be hinted more flexibly (if player n plays the 4, and the
-player after it has the 5, players can clue that 5 by giving a play hint even
-though that doesn't make sense)
-- Giving hints which will instruct a player to hint when there are no hints left
-
-Improvements in standard_play: (all improvements are very small)
-- allow discarding of cards in (some) other players' hands (after clue-receiver
-    and before clue-giver (both strictly))
-- prefer to play cards which are already discarded
-
-Improvements in clue giving (to next player):
-- Clue easy_discard to next player if
-    (clued plays + possible plays afterwards) < 3
-- Clue 'hint' instead of discard near the end of the game
-
-Other Improvements:
-If I have a discard action and no other players are clued: decide whether it is
-better to clue (complicated to implement, and probably not really better)
 """
 
 from hanabi_classes import *
@@ -47,7 +29,7 @@ class HatPlayer(AIPlayer):
         during opponents' turns.
         This does *not* reset last_clued_any_clue, since that variable should
         not be reset during the round."""
-        self.im_clued = False         # Am I being clued?
+        self.im_clued = False         # Am I clued?
         self.first_clued = -1         # The first player clued by that clue
         self.last_clued = -1          # The last player clued by that clue
         # The value of that clue (see description of "standard_play")
@@ -111,7 +93,6 @@ class HatPlayer(AIPlayer):
 
 
     def standard_play(self, cards, me, dont_play, progress, decksize, hints, r):
-        # TODO: maybe add dont_discard argument?
         """Returns a number 0-8 coding which action should be taken by player
         `me`.
         0-3 means play card 0-3.
@@ -141,7 +122,6 @@ class HatPlayer(AIPlayer):
 
     def modified_play(self, cards, hinter, player, dont_play, progress,\
                       decksize, hints, r):
-        # TODO: maybe add dont_discard argument?
         """Modified play for the first player the cluegiver clues. This play can
         be smarter than standard_play"""
         # this is never called on a player's own hand
@@ -160,6 +140,7 @@ class HatPlayer(AIPlayer):
                         print('play a 5 instead')
                     return cards.index(playablefives[0])
             return x
+
         # If too much players will discard, hint instead of discarding.
         if self.max_futurehints >= 8:
             if x < 8 and r.verbose:
