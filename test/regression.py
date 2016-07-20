@@ -5,7 +5,7 @@
 ./test/regression.py --record
 record a seed value and run hanabi games with that seed
 
-./test/regression.py --test
+./test/regression.py
 run new games with the recorded seed value and compare
 
 ./test/regression.py --cleanup
@@ -75,4 +75,3 @@ for p in playerTypes:
         else:
             print(p + ' has changed')
 exit(0)
-
