@@ -14,7 +14,6 @@ Command-line arguments (see usage):
 
 import sys, argparse, logging, random
 from time import gmtime, strftime
-from scipy import stats, mean
 from math import sqrt
 from play_hanabi import play_one_round
 from hanabi_classes import SUIT_CONTENTS
@@ -62,6 +61,16 @@ assert args.game_type in ('rainbow', 'purple', 'vanilla')
 assert args.n_rounds > 0
 assert args.verbosity in ('silent', 'scores', 'verbose', 'log')
 assert args.loss_score in ('zero', 'full')
+
+def mean(lst):
+    return sum(lst) / len(lst)
+
+def std_err(lst):
+    m = mean(lst)
+    n = len(lst)
+    sumSquaredErrs = sum([(x - m)**2 for x in lst])
+    var = sumSquaredErrs / (n - 1)
+    return sqrt(var / n)
 
 # Load players.
 players = []
@@ -132,7 +141,7 @@ if len(scores) > 1: # Only print stats if there were multiple rounds.
     std_perfect_games = sqrt(count_max * (args.n_rounds - count_max) / \
                              float (args.n_rounds - 1)) / args.n_rounds
     logger.info('AVERAGE SCORE: {:.2f} +/- {:.3f} (1 std. err.)'\
-                .format(mean(scores), stats.sem(scores)))
+                .format(mean(scores), std_err(scores)))
     logger.info('PERFECT GAMES: {:.2f}% +/- {:.2f}pp (1 std. err.)'
                 .format(100*perfect_games, 100*std_perfect_games))
 elif args.verbosity == 'silent': # Still print score for silent single round
