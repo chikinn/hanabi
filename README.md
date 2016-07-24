@@ -86,3 +86,19 @@ despicable like `CheatingIdiot`!  ... You make me sick.)
 After you write your player class, add a couple lines to `hanabi_wrapper.py` so
 the framework can detect it. The sections you need to edit are marked `TODO:`.
 Also add your class to the `README`.
+
+## Installation if needed
+If you need to install dependencies to make the project run:
+
+    pip install -r requirements.txt
+
+It is however you do run this inside of a `virtualenv`, like below:
+
+    virtualenv venv
+    ./venv/bin/activate
+    pip install -r requirements.txt
+    ./hanabi_wrapper.py newest newest newest newest
+
+And then when you're done - you can exit the virtualenv:
+
+    deactivate
