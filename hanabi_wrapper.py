@@ -16,7 +16,7 @@ import sys, argparse, logging, random
 from time import gmtime, strftime
 from scipy import stats, mean
 from math import sqrt
-from play_hanabi import play_one_round
+from play_hanabi import play_one_round, player_end_game_logging
 from hanabi_classes import SUIT_CONTENTS
 
 ### TODO: IMPORT YOUR PLAYER
@@ -29,17 +29,19 @@ from human_player import HumanPlayer
 from encoding_player import EncodingPlayer
 from general_encoding_player import GeneralEncodingPlayer
 from hat_player import HatPlayer
+from heuristics_player import HeuristicsPlayer
 
 # Define all available players.
-availablePlayers = {'idiot'   : CheatingIdiotPlayer, ### TODO: ADD YOURS
-                    'cheater' : CheatingPlayer,
-                    'basic'   : MostBasicPlayer,
-                    'brainbow': BasicRainbowPlayer,
-                    'newest'  : NewestCardPlayer,
-                    'human'   : HumanPlayer,
-                    'encoder' : EncodingPlayer,
-                    'gencoder': GeneralEncodingPlayer,
-                    'hat'     : HatPlayer}
+availablePlayers = {'idiot'     : CheatingIdiotPlayer, ### TODO: ADD YOURS
+                    'cheater'   : CheatingPlayer,
+                    'basic'     : MostBasicPlayer,
+                    'brainbow'  : BasicRainbowPlayer,
+                    'newest'    : NewestCardPlayer,
+                    'human'     : HumanPlayer,
+                    'encoder'   : EncodingPlayer,
+                    'gencoder'  : GeneralEncodingPlayer,
+                    'hat'       : HatPlayer,
+                    'heuristic' : HeuristicsPlayer}
 
 # Parse command-line args.
 parser = argparse.ArgumentParser(description='Process some integers.')
@@ -63,12 +65,22 @@ assert args.n_rounds > 0
 assert args.verbosity in ('silent', 'scores', 'verbose', 'log')
 assert args.loss_score in ('zero', 'full')
 
+# Create logging object for all output.
+logger = logging.getLogger('game_log')
+logger.setLevel(logging.DEBUG)
+ch = logging.FileHandler('games.log') if args.verbosity == 'log'\
+                                else logging.StreamHandler()
+for i in range(len(logger.handlers)): logger.handlers.pop() # Added to remove duplicate logging output in Spyder
+
+ch.setLevel(logging.INFO)
+logger.addHandler(ch)
+
 # Load players.
 players = []
 rawNames = args.requiredPlayers + args.morePlayers
 for i in range(len(rawNames)):
     assert rawNames[i] in availablePlayers
-    players.append(availablePlayers[rawNames[i]]())
+    players.append(availablePlayers[rawNames[i]](i, logger, args.verbosity))
     rawNames[i] = rawNames[i].capitalize()
 
 # Resolve duplicate names by appending '1', '2', etc. as needed.
@@ -90,16 +102,6 @@ for i in range(len(names)):
     while len(names[i]) < len(longestName):
         names[i] += ' '
 
-# Create logging object for all output.
-logger = logging.getLogger('game_log')
-logger.setLevel(logging.DEBUG)
-ch = logging.FileHandler('games.log') if args.verbosity == 'log'\
-                                else logging.StreamHandler()
-for i in range(len(logger.handlers)): logger.handlers.pop() # Added to remove duplicate logging output in Spyder
-
-ch.setLevel(logging.INFO)
-logger.addHandler(ch)
-
 if args.verbosity == 'log':
     logger.info('#'*22 + ' NEW ROUNDSET ' + '#'*22)
     logger.info('{} ROUNDSET: {} round(s) of {} Hanabi'\
@@ -119,6 +121,7 @@ for i in range(args.n_rounds):
     scores.append(score)
     if args.verbosity != 'silent':
         logger.info('Score: ' + str(score))
+    player_end_game_logging(players)
 
 # Print average scores.
 if args.verbosity != 'silent':

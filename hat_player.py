@@ -34,7 +34,7 @@ from hanabi_classes import *
 from bot_utils import *
 from copy import copy
 
-class HatPlayer:
+class HatPlayer(AIPlayer):
     def reset_memory(self):
         """(re)set memory to standard values except last_clued
 

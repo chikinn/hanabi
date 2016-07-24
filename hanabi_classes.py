@@ -22,6 +22,24 @@ N_LIGHTNING   = 3
 RAINBOW_SUIT  = '?'
 PURPLE_SUIT   = 'p'
 
+class AIPlayer(object):
+    """AIPlayer class that should be inherited from when making """
+    def __init__(self, me, logger, verbosity):
+        super(AIPlayer, self).__init__()
+        self.logger = logger
+        self.verbosity = verbosity
+        self.me = me
+
+    def play(self, r):
+        """Must be overridden to perform a play"""
+        self.logger.error("AIPlayer must override this method")
+        pass
+
+    def end_game_logging(self):
+        """Can be overridden to perform logging at the end of the game"""
+        pass
+
+
 class Round:
     """Store round info and interact with AI players.
 

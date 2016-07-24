@@ -32,3 +32,8 @@ def play_one_round(gameType, players, names, verbosity, lossScore):
         r.get_play(players[r.whoseTurn]) # Play one turn.
 
     return sum(r.progress.values()) # Final score
+
+def player_end_game_logging(players):
+    """Will log any information specific to a player at the end of the game"""
+    for player in players:
+        player.end_game_logging()

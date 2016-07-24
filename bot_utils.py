@@ -8,9 +8,12 @@ from hanabi_classes import *
 def get_plays(cards, progress):
     """Return a list of plays (subset of input); call only on visible cards!"""
     return [card for card in cards if is_playable(card, progress)]
-            
+
+def is_cardname_playable(card_name, progress):
+    return progress[card_name[1]] + 1 == int(card_name[0])
+
 def is_playable(card, progress):
-    return progress[card['name'][1]] + 1 == int(card['name'][0])
+    return is_cardname_playable(card["name"], progress)
 
 def get_played_cards(cards, progress):
     """Return the sublist of already played cards;
@@ -105,16 +108,26 @@ def deduce_plays(cards, progress, suits):
 
     return plays
 
-def possibly_playable(card, progress, suits):
-    """Check if it is possible with current knowledge that card is playable"""
-    playables = [str(value+1) + suit for suit, value in progress.items()
-            if value < 5]
-    ret = [name for name in playables
+def playable_cards(progress):
+    """Returns an array of all playable cards"""
+    return [str(value+1) + suit for suit, value in progress.items()
+                if value < 5]
+
+def cards_possibly_in_set(card, card_name_array):
+    """Get all the cards that could possibly be in the set given the info that
+       we know from hints only."""
+    ret = [name for name in card_name_array
             if (all(matches(name, hint) for hint in card['direct']) and not
                 any(matches(name, hint) for hint in card['indirect']))]
     return ret
 
+def possibly_playable(card, progress):
+    """Check if it is possible with current knowledge that card is playable"""
+    playables = playable_cards(progress)
+    return cards_possibly_in_set(card, playables)
+
 def matches(name, hint):
+    """"Name is the card including number+suit, hint is single char"""
     return (hint in name or (hint in VANILLA_SUITS and RAINBOW_SUIT in name))
 
 def other_players(me, r):
@@ -166,3 +179,29 @@ def can_see_all_useful_cards(me, r):
             if s not in visible_cards:
                 return False
     return True
+
+def get_all_knowable_cards(player, r):
+    """This gets all card names that are known including cards that are:
+          - Discarded
+          - Played
+          - Visible in other players hands
+          - 100% certain in your hand"""
+    l = []
+    # Discard pile includes Discarded and Played
+    l.extend(r.discardpile)
+    l.extend([card['name'] for card in get_all_visible_cards(player, r)])
+    l.extend([card['name'] for card in r.h[player].cards if card['known']])
+    return l
+
+def inverse_card_set(cardset, r):
+    """Returns the inverse of the card set passed."""
+    in_set = list(cardset) # Make a local copy since we mutate
+    inverse_set = []
+    for suit in r.suits:
+        for number in SUIT_CONTENTS:
+            newCard = number + suit
+            if newCard in in_set:
+                in_set.remove(newCard)
+            else:
+                inverse_set.append(newCard)
+    return inverse_set

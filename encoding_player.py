@@ -11,12 +11,12 @@ import numpy as np
 #import sys
 #import random
 #
-#from hanabi_classes import *
+from hanabi_classes import AIPlayer
 
 # This AI is designed to implement an information encoding algorithm
 # Still very much a work in progress
 
-class EncodingPlayer:
+class EncodingPlayer(AIPlayer):
     def __init__(self):
         pass
         
