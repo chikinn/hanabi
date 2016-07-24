@@ -14,7 +14,6 @@ Command-line arguments (see usage):
 
 import sys, argparse, logging, random
 from time import gmtime, strftime
-from scipy import stats, mean
 from math import sqrt
 from play_hanabi import play_one_round, player_end_game_logging
 from hanabi_classes import SUIT_CONTENTS
@@ -65,15 +64,29 @@ assert args.n_rounds > 0
 assert args.verbosity in ('silent', 'scores', 'verbose', 'log')
 assert args.loss_score in ('zero', 'full')
 
-# Create logging object for all output.
-logger = logging.getLogger('game_log')
-logger.setLevel(logging.DEBUG)
-ch = logging.FileHandler('games.log') if args.verbosity == 'log'\
-                                else logging.StreamHandler()
-for i in range(len(logger.handlers)): logger.handlers.pop() # Added to remove duplicate logging output in Spyder
+def get_logger(args):
+  # Create logging object for all output.
+  logger = logging.getLogger('game_log')
+  logger.setLevel(logging.DEBUG)
+  ch = logging.FileHandler('games.log') if args.verbosity == 'log'\
+                                  else logging.StreamHandler()
+  for i in range(len(logger.handlers)): logger.handlers.pop() # Added to remove duplicate logging output in Spyder
 
-ch.setLevel(logging.INFO)
-logger.addHandler(ch)
+  ch.setLevel(logging.INFO)
+  logger.addHandler(ch)
+  return logger
+
+def mean(lst):
+    return sum(lst) / len(lst)
+
+def std_err(lst):
+    m = mean(lst)
+    n = len(lst)
+    sumSquaredErrs = sum([(x - m)**2 for x in lst])
+    var = sumSquaredErrs / (n - 1)
+    return sqrt(var / n)
+
+logger = get_logger(args)
 
 # Load players.
 players = []
@@ -135,7 +148,7 @@ if len(scores) > 1: # Only print stats if there were multiple rounds.
     std_perfect_games = sqrt(count_max * (args.n_rounds - count_max) / \
                              float (args.n_rounds - 1)) / args.n_rounds
     logger.info('AVERAGE SCORE: {:.2f} +/- {:.3f} (1 std. err.)'\
-                .format(mean(scores), stats.sem(scores)))
+                .format(mean(scores), std_err(scores)))
     logger.info('PERFECT GAMES: {:.2f}% +/- {:.2f}pp (1 std. err.)'
                 .format(100*perfect_games, 100*std_perfect_games))
 elif args.verbosity == 'silent': # Still print score for silent single round

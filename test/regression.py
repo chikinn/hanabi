@@ -47,6 +47,7 @@ if args.record:
                 ' '.join(
                     ['./hanabi_wrapper.py', p, p, p, p, p, '-s', str(seed)]),
                 shell=True,
+                universal_newlines=True,
                 stdout=output,
                 stderr=subprocess.STDOUT)
 
@@ -64,6 +65,7 @@ for p in playerTypes:
     proc = subprocess.Popen(
         ' '.join(['./hanabi_wrapper.py', p, p, p, p, p, '-s', str(seed)]),
         shell=True,
+        universal_newlines=True,
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT)
     after = proc.communicate()[0]
