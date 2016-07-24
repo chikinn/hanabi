@@ -26,7 +26,7 @@ def compatible_input(message, pythonVersion=PYTHON_VERSION):
     else:
         return raw_input(message)
 
-class HumanPlayer:
+class HumanPlayer(AIPlayer):
     def getInput(self, zazzIndent, validInput):
         while True:
             userInput = compatible_input(zazzIndent + ' Please select: ')

@@ -11,7 +11,7 @@ about to be discarded, or playing all 1s from starting round hints.
 from hanabi_classes import *
 from bot_utils import *
 
-class NewestCardPlayer:
+class NewestCardPlayer(AIPlayer):
 
     # find the newest card in your hand for which info was relevant
     # as long as you haven't drawn any new cards, this should have the same
@@ -54,7 +54,7 @@ class NewestCardPlayer:
                 hintee = (target - me + r.nPlayers) % r.nPlayers
                 if target == me:
                     play = self.get_my_newest_hinted(cards, info)
-                    if play and possibly_playable(play, r.progress, r.suits):
+                    if play and possibly_playable(play, r.progress):
                         return 'play', play
                 elif hintee < hinterPosition: # hintee hasn't yet played
                     targetCard = self.get_newest_hinted(r.h[target].cards, info)

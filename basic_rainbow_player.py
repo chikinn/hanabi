@@ -17,7 +17,7 @@ TODO: Simplify the code. I guarantee there are more efficient ways to do just
 
 from hanabi_classes import *
 
-class BasicRainbowPlayer:
+class BasicRainbowPlayer(AIPlayer):
     def identifyCard(self, card):
         # More challenging when rainbows are wild! Also determines new direct
         # and indirect info and updates its own hand information.

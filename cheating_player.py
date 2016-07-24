@@ -43,7 +43,7 @@ def count_unplayed_cards(r, progress):
     return count
 
 
-class CheatingPlayer:
+class CheatingPlayer(AIPlayer):
 
     def want_to_discard(self, cards, player, r, progress):
         """Returns a pair (badness, card) where badness indicates how bad it is

@@ -9,8 +9,9 @@ from copy import deepcopy as c
 import itertools as it
 import numpy as np
 import random, re, sys, time
+from hanabi_classes import AIPlayer
 
-class GeneralEncodingPlayer:
+class GeneralEncodingPlayer(AIPlayer):
     def __init__(self):
         # This boolean is for replicate runs. Certain initialization routines
         # only need to be performed once, and can be carried over across

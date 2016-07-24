@@ -7,7 +7,7 @@ picks one randomly.  When he doesn't, he discards randomly.
 from hanabi_classes import *
 from bot_utils import get_plays
 
-class CheatingIdiotPlayer:
+class CheatingIdiotPlayer(AIPlayer):
     def play(self, r):
         cards = r.h[r.whoseTurn].cards
         progress = r.progress
