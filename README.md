@@ -90,7 +90,7 @@ If you need to install dependencies to make the project run:
 
     pip install -r requirements.txt
 
-It is however you do run this inside of a `virtualenv`, like below:
+It is however recommended you do run this inside of a `virtualenv`, like below:
 
     virtualenv venv
     ./venv/bin/activate
