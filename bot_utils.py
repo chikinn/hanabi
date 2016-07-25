@@ -31,13 +31,13 @@ def get_duplicate_cards(cards):
 def get_visible_cards(cards1, cards2):
     """Return a list of the intersection of cards1 and cards2; call only on
     visible cards!"""
-    names2 = map(lambda x: x['name'], cards2)
-    return list(filter(lambda x: x['name'] in names2, cards1))
+    names2 = [card['name'] for card in cards2]
+    return [card for card in cards1 if card['name'] in names2]
 
 def get_nonvisible_cards(cards1, names2):
     """Return a list of cards that are in cards1 but not names2; call only on
     visible cards!"""
-    return list(filter(lambda x: x['name'] not in names2, cards1))
+    return [card for card in cards1 if card['name'] not in names2]
 
 def possible_hints(card):
     name = card['name']
@@ -61,17 +61,19 @@ def deduce_plays(cards, progress, suits):
             if info in suits:
                 if suit == '':
                     suit = info
-                    if '?' in suits:
-                        suit += '?' # With one hint, can't rule out rainbow.
+                    if RAINBOW_SUIT in suits:
+                        # With one hint, can't rule out rainbow.
+                        suit += RAINBOW_SUIT
                 elif suit not in info:
-                    suit = '?' # Rainbow card matches more than one suit.
-            elif info in '123456789': # Maybe we'll add variants later.
+                    # Rainbow card matches more than one suit.
+                    suit = RAINBOW_SUIT
+            elif info in SUIT_CONTENTS:
                 value = info
 
         if len(suit) == 2: # Try to deduce that card is not rainbow.
             for info in card['indirect']:
                 if info in suits:
-                    suit = suit.replace('?', '')
+                    suit = suit.replace(RAINBOW_SUIT, '')
                     break # Already found the info we needed.
 
         if len(suit) == 1 and value != '' and progress[suit] == int(value) - 1:
@@ -85,12 +87,11 @@ def playable_cards(progress):
                 if value < 5]
 
 def cards_possibly_in_set(card, card_name_array):
-    """Get all the cards that could possibly be in the set given the info that
-       we know from hints only."""
-    ret = [name for name in card_name_array
+    """Given a list of card names, return only those which are consistent
+       with the hinted information about card (non-visible)."""
+    return [name for name in card_name_array
             if (all(matches(name, hint) for hint in card['direct']) and not
                 any(matches(name, hint) for hint in card['indirect']))]
-    return ret
 
 def possibly_playable(card, progress):
     """Check if it is possible with current knowledge that card is playable"""
@@ -98,7 +99,7 @@ def possibly_playable(card, progress):
     return cards_possibly_in_set(card, playables)
 
 def matches(name, hint):
-    """"Name is the card including number+suit, hint is single char"""
+    """Name is the card including number+suit, hint is single char"""
     return (hint in name or (hint in VANILLA_SUITS and RAINBOW_SUIT in name))
 
 def other_players(me, r):
@@ -108,8 +109,9 @@ def other_players(me, r):
 def count_unique_future_plays(cards, progress):
     """Returns the number of plays or future plays,
     counting duplicate cards only once; call only on visible cards!"""
-    unique_names = list(set(map(lambda x: x['name'], cards)))
-    return len(list(filter(lambda x: int(x[0]) > progress[x[1]], unique_names)))
+    remaining_plays = \
+        set([card['name'] for card in cards if is_playable(card, progress)])
+    return len(remaining_plays)
 
 def get_all_visible_cards(player, r):
     """Returns list of visible cards for player"""
