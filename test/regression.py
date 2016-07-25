@@ -20,7 +20,8 @@ playerTypes = {'idiot',
               'cheater',
               'brainbow',
               'newest',
-              'hat'}
+              'hat',
+              'heuristic'}
 
 parser = argparse.ArgumentParser(description='record, test, or cleanup')
 parser.add_argument('-r', '--record', help="record current output",
