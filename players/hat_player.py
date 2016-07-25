@@ -123,7 +123,7 @@ class HatPlayer(AIPlayer):
         playableCards = list(filter(lambda x: x['name'] not in dont_play,\
                                     get_plays(cards, progress)))
         if playableCards:
-            wanttoplay = find_lowest(playableCards)[0]
+            wanttoplay = find_lowest(playableCards)
             return cards.index(wanttoplay)
         # Do we have plenty of clues?
         if hints > 5:
@@ -210,8 +210,8 @@ class HatPlayer(AIPlayer):
         discardCards = list(filter(lambda x: x['name'][0] != '5', discardCards))
         assert all(map(lambda x: x['name'][0] != '1', discardCards))
         if discardCards: # discard a card which is not unsafe to discard
-            discardCards = find_highest(discardCards)
-            return cards.index(discardCards[0]) + 4
+            discardCard = find_highest(discardCards)
+            return cards.index(discardCard) + 4
         return 0
 
 

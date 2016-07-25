@@ -43,43 +43,14 @@ def possible_hints(card):
     name = card['name']
     return name[0] + VANILLA_SUITS if RAINBOW_SUIT in name else name
 
-def find_max(f, lst):
-    """Returns sublist of lst with all members x where f(x) is maximal"""
-    if len(lst) <= 1: # a little optimization if calling f is expensive
-        return lst
-    l = []
-    for x in lst:
-        value = f(x)
-        if 'highest' not in locals() or value > highest:
-            highest = value
-            l = [x]
-        elif value == highest:
-            l.append(x)
-    return l
-
-def find_min(f, lst):
-    """Analogous to find_max"""
-    if len(lst) <= 1:
-        return lst
-    l = []
-    for x in lst:
-        value = f(x)
-        if 'lowest' not in locals() or value < lowest:
-            lowest = value
-            l = [x]
-        elif value == lowest:
-            l.append(x)
-    return l
-
 def find_highest(cards):
-    """Returns list of cards with highest value in a list;
+    """Returns card with highest number value in a list;
     call only on visible cards!"""
-    return find_max (lambda x: int(x['name'][0]), cards)
+    return max(cards, key=lambda card: int(card['name'][0]))
 
 def find_lowest(cards):
     """Analogous to find_highest"""
-    return find_min (lambda x: int(x['name'][0]), cards)
-
+    return min(cards, key=lambda card: int(card['name'][0]))
 
 def deduce_plays(cards, progress, suits):
     """Return a list of plays (subset of input); fine to call on own hand."""
