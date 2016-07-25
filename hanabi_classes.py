@@ -72,7 +72,7 @@ class Round(object):
     discardpile: list of (names of) cards which are discarded
     """
 
-    def __init__(self, gameType, players, names, verbosity):
+    def __init__(self, gameType, players, names, verbosity, isPoliced):
         """Instantiate a Round and its Hand sub-objects."""
         self.gameType  = gameType
         self.suits = VANILLA_SUITS
@@ -98,6 +98,7 @@ class Round(object):
         self.verbose = (verbosity in ('verbose', 'log'))
         self.log = (verbosity == 'log')
         self.zazz = ['[HANDS]', '[PLAYS]']
+        self.isPoliced = isPoliced
 
         self.logger = logging.getLogger('game_log')
 
@@ -178,11 +179,13 @@ class Round(object):
         """Retrieve and execute AI p's play for whoever's turn it is."""
         if self.log and self.turnNumber != 0: self.printAllKnowledge()
 
-        play = playType, playValue = p.play(self)
+        play = playType = playValue = None
+        hand = self.h[self.whoseTurn]
+        with self.PolicedHand(self.isPoliced, hand):
+            play = playType, playValue = p.play(self)
         self.playHistory.append(play)
         self.HandHistory.append(deepcopy(self.h))
         self.progressHistory.append(deepcopy(self.progress))
-        hand = self.h[self.whoseTurn]
 
         verboseHandAtStart = ' '.join([card['name'] for card in hand.cards])
         if playType == 'hint':
@@ -207,7 +210,7 @@ class Round(object):
 
         else:
             card = playValue
-            assert card in hand.cards
+            assert card in hand
 
             desc = card['name']
 
@@ -267,11 +270,57 @@ class Round(object):
                                 'time'     : turnNumber,
                                 'direct'   : [],
                                 'indirect' : [],
-                                'known'    : False })
+                                'known'    : False,
+                                'sec_name' : newCard})
 
         def drop(self, card):
             """Discard a card from the hand."""
             for i,c in enumerate(self.cards): # To avoid ambiguity, all of the card data is
-                if c == card:    #   checked instead of just the name.
+                if self.card_equals(card, c):
                     self.cards.remove(c)
                     return i
+
+        def card_equals(self, card1, card2):
+            """Test for equality using only the below keys
+               do not use name, as that could be removed if Policing"""
+            verify_keys = ['sec_name', 'time', 'direct', 'indirect', 'known']
+
+            if card2 is None or card1 is None:
+                return False
+
+            for key in verify_keys:
+                if card1[key] != card2[key]:
+                    return False
+            return True
+
+        def __contains__(self, card):
+            """Convenience function to determine if card in hand"""
+            for c in self.cards:
+                if self.card_equals(c, card):
+                    return True
+            return False
+
+
+    class PolicedHand(object):
+        """Allows you to create a scope that will remove the 'name'
+           field from the given hand, returning it to normal when
+           leaving the scope"""
+        def __init__(self, isPoliced, hand):
+            self.isPoliced = isPoliced
+            self.hand = hand
+
+        def __enter__(self):
+            if self.isPoliced:
+                for card in self.hand.cards:
+                    if not card['known']:
+                        card['sec_name'] = card.pop('name', -1)
+
+        def __exit__(self, exc_type, exc_val, exc_tb):
+            if self.isPoliced:
+                for card in self.hand.cards:
+                    card['name'] = card['sec_name']
+            if str(exc_val) == '\'name\'':
+                # Very likely this is an issue for the police
+                print("*"*37)
+                print("\n\n You have been caught by the police! \n\n")
+                print("*"*37)
