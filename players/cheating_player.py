@@ -67,18 +67,19 @@ class CheatingPlayer(AIPlayer):
             return 1, random.choice(discardCards)
         discardCards = get_visible_cards(cards, get_all_visible_cards(player,r))
         if discardCards: # discard a card which you can see (lowest first)
-            discardCards = find_lowest(discardCards)
-            return 2, random.choice(discardCards)
+            random.shuffle(discardCards)
+            return 2, find_lowest(discardCards)
         # note: we never reach this part of the code if there is a 1 in the
         # hand of player
         discardCards = get_nonvisible_cards(cards, r.discardpile)
         discardCards = list(filter(lambda x: x['name'][0] != '5', discardCards))
         if discardCards: # discard a card which is not unsafe to discard
-            discardCards = find_highest(discardCards)
-            card = random.choice(discardCards)
+            random.shuffle(discardCards)
+            card = find_highest(discardCards)
             return 50 - 10 * int(card['name'][0]), card
-        discardCards = find_highest(cards)
-        card = random.choice(discardCards)
+        cards_copy = list(cards)
+        random.shuffle(cards_copy)
+        card = find_highest(cards_copy)
         return 600 - 100 * int(card['name'][0]), card
 
     def play(self, r):
@@ -96,8 +97,8 @@ class CheatingPlayer(AIPlayer):
 
         playableCards = get_plays(cards, progress)
         if playableCards: # Play a card, if possible (lowest value first)
-            wanttoplay = find_lowest(playableCards)
-            return 'play', random.choice(wanttoplay)
+            random.shuffle(playableCards)
+            return 'play', find_lowest(playableCards)
 
         if r.hints == 8: # Hint if you are at maximum hints
             return 'hint', (nextplayer, '5')
