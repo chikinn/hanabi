@@ -30,6 +30,11 @@ class AIPlayer(object):
         self.verbosity = verbosity
         self.me = me
 
+    @classmethod
+    def get_name(cls):
+        """Name to use when presenting this class to the user"""
+        raise Exception('Override the function "get_name" in your class')
+
     def play(self, r):
         """Must be overridden to perform a play"""
         self.logger.error("AIPlayer must override this method")
@@ -40,7 +45,7 @@ class AIPlayer(object):
         pass
 
 
-class Round:
+class Round(object):
     """Store round info and interact with AI players.
 
     The only method that interacts with AIs is 'get_play'.
@@ -232,7 +237,7 @@ class Round:
             self.zazz[1] = ' ' * len(self.zazz[1])
 
 
-    class Hand:
+    class Hand(object):
         """Manage one player's hand of cards.
 
         cards (list of dict): One dict per card.  Keys:

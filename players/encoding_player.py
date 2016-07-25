@@ -17,9 +17,11 @@ from hanabi_classes import AIPlayer
 # Still very much a work in progress
 
 class EncodingPlayer(AIPlayer):
-    def __init__(self):
-        pass
-        
+
+    @classmethod
+    def get_name(cls):
+        return 'encoder'
+
     def InitializeConstants(self,r):
         self.nPlayers = r.nPlayers
         self.SelfID = r.whoseTurn

@@ -16,6 +16,11 @@ Weights = {
 class HeuristicsPlayer(AIPlayer):
     """
     """
+
+    @classmethod
+    def get_name(cls):
+        return 'heuristic'
+
     def __init__(self, *args):
         super(HeuristicsPlayer, self).__init__(*args)
         self.tracking = HeuristicsTracking()
