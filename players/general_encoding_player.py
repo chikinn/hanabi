@@ -12,6 +12,11 @@ import random, re, sys, time
 from hanabi_classes import AIPlayer
 
 class GeneralEncodingPlayer(AIPlayer):
+
+    @classmethod
+    def get_name(cls):
+        return 'gencoder'
+
     def __init__(self):
         # This boolean is for replicate runs. Certain initialization routines
         # only need to be performed once, and can be carried over across

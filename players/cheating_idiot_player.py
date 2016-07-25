@@ -8,6 +8,11 @@ from hanabi_classes import *
 from bot_utils import get_plays
 
 class CheatingIdiotPlayer(AIPlayer):
+
+    @classmethod
+    def get_name(cls):
+        return 'idiot'
+
     def play(self, r):
         cards = r.h[r.whoseTurn].cards
         progress = r.progress

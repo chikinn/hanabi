@@ -16,31 +16,12 @@ import sys, argparse, logging, random
 from time import gmtime, strftime
 from math import sqrt
 from play_hanabi import play_one_round, player_end_game_logging
-from hanabi_classes import SUIT_CONTENTS
+from hanabi_classes import SUIT_CONTENTS, AIPlayer
+from players import *
 
-### TODO: IMPORT YOUR PLAYER
-from cheating_idiot_player import CheatingIdiotPlayer
-from cheating_player import CheatingPlayer
-from most_basic_player import MostBasicPlayer
-from basic_rainbow_player import BasicRainbowPlayer
-from newest_card_player import NewestCardPlayer
-from human_player import HumanPlayer
-from encoding_player import EncodingPlayer
-from general_encoding_player import GeneralEncodingPlayer
-from hat_player import HatPlayer
-from heuristics_player import HeuristicsPlayer
-
-# Define all available players.
-availablePlayers = {'idiot'     : CheatingIdiotPlayer, ### TODO: ADD YOURS
-                    'cheater'   : CheatingPlayer,
-                    'basic'     : MostBasicPlayer,
-                    'brainbow'  : BasicRainbowPlayer,
-                    'newest'    : NewestCardPlayer,
-                    'human'     : HumanPlayer,
-                    'encoder'   : EncodingPlayer,
-                    'gencoder'  : GeneralEncodingPlayer,
-                    'hat'       : HatPlayer,
-                    'heuristic' : HeuristicsPlayer}
+availablePlayers = {}
+for playerSubClass in AIPlayer.__subclasses__():
+  availablePlayers[playerSubClass.get_name()] = playerSubClass
 
 # Parse command-line args.
 parser = argparse.ArgumentParser(description='Process some integers.')

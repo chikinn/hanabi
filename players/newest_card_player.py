@@ -13,6 +13,10 @@ from bot_utils import *
 
 class NewestCardPlayer(AIPlayer):
 
+    @classmethod
+    def get_name(cls):
+        return 'newest'
+
     # find the newest card in your hand for which info was relevant
     # as long as you haven't drawn any new cards, this should have the same
     # outcome as get_newest_hinted, but without looking at your cards
