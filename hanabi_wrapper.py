@@ -38,6 +38,10 @@ parser.add_argument('-l', '--loss_score', default='zero', metavar='loss_score',
   type=str, help='zero or full')
 parser.add_argument('-s', '--seed', default=-1,
   metavar='seed', type=int, help='fixed random seed.')
+parser.add_argument('-p', '--police',
+  dest='police', action='store_true', help='Turns on the police to catch cheaters')
+parser.set_defaults(police=False)
+
 args = parser.parse_args()
 
 assert args.game_type in ('rainbow', 'purple', 'vanilla')
@@ -111,7 +115,7 @@ for i in range(args.n_rounds):
     if args.verbosity in ('verbose', 'log'):
         logger.info('\n' + 'ROUND {}:'.format(i))
     score = play_one_round(args.game_type, players, names, args.verbosity,
-                           args.loss_score)
+                           args.loss_score, args.police)
     scores.append(score)
     if args.verbosity != 'silent':
         logger.info('Score: ' + str(score))

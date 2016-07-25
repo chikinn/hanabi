@@ -7,9 +7,9 @@ in another module (hanabi_classes).
 
 from hanabi_classes import *
 
-def play_one_round(gameType, players, names, verbosity, lossScore):
+def play_one_round(gameType, players, names, verbosity, lossScore, isPoliced):
     """Play a full round and return the score (int)."""
-    r = Round(gameType, players, names, verbosity) # Instance of a single Hanabi round
+    r = Round(gameType, players, names, verbosity, isPoliced) # Instance of a single Hanabi round
     r.generate_deck_and_deal_hands()
 
     while r.gameOverTimer != 0:

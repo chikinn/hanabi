@@ -168,16 +168,28 @@ def count_unplayed_playable_cards(r, progress):
                 break
     return n
 
-def can_see_all_useful_cards(me, r):
-    """Returns whether the player can see at least one copy of each card which is still playable"""
-    visible_cards = map(lambda x: x['name'], get_all_visible_cards(me, r))
+def get_all_useful_cardnames(me, r):
+    """Gets all cards that could be playable in future"""
+    l = []
     for suit in r.suits:
         for i in range(r.progress[suit]+1,int(SUIT_CONTENTS[-1])+1):
             s = str(i) + suit
+
+            # If we've already gotten rid of this card
+            # then we don't add it or any numbers afterwards
             if r.discardpile.count(s) == SUIT_CONTENTS.count(str(i)):
                 break
-            if s not in visible_cards:
-                return False
+            l.append(s)
+
+    return l
+
+def can_see_all_useful_cards(me, r):
+    """Returns whether the player can see at least one copy of each card which is still playable"""
+    visible_cards = map(lambda x: x['name'], get_all_visible_cards(me, r))
+    useful_cards = get_all_useful_cardnames(me, r)
+    for card in useful_cards:
+        if card not in visible_cards:
+            return False
     return True
 
 def get_all_knowable_cards(player, r):
