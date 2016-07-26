@@ -9,7 +9,11 @@ import inspect
 from hanabi_classes import AIPlayer
 
 for loader, name, is_pkg in pkgutil.walk_packages(__path__):
-    module = loader.find_module(name).load_module(name)
+    try: # only fail later if desired players can't be loaded *cough* numpy
+      module = loader.find_module(name).load_module(name)
+    except ImportError as err:
+      print("Failed to import " + name + " due to error: " + str(err))
+      continue
 
     for name, value in inspect.getmembers(module):
         if name.startswith('__'):

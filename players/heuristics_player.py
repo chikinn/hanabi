@@ -91,7 +91,7 @@ class HeuristicsUtils(object):
             if card_name in useful_cardnames:
                 overallProbability += probability
         
-        print overallProbability
+        print(overallProbability)
 
     def get_probability_playable(self, card, location):
         odds = self.get_probability_playable_true(card)
