@@ -120,8 +120,8 @@ class HatPlayer(AIPlayer):
         # this is never called on a player's own hand
         assert self != r.PlayerRecord[me]
         # Do I want to play?
-        playableCards = list(filter(lambda x: x['name'] not in dont_play,\
-                                    get_plays(cards, progress)))
+        playableCards = [card for card in get_plays(cards, progress)
+                if card['name'] not in dont_play]
         if playableCards:
             wanttoplay = find_lowest(playableCards)
             return cards.index(wanttoplay)
@@ -152,8 +152,8 @@ class HatPlayer(AIPlayer):
         # a future person to discard, do that.
         if x < 4:
             if self.min_futurehints <= 0 and cards[x]['name'][0] != '5':
-                playablefives = list(filter(lambda x: x['name'][0] == '5',\
-                                            get_plays(cards, progress)))
+                playablefives = [card for card in get_plays(cards, progress)
+                        if card['name'][0] == '5']
                 if playablefives:
                     if r.verbose:
                         print('play a 5 instead')
@@ -197,7 +197,7 @@ class HatPlayer(AIPlayer):
         discardCards = get_duplicate_cards(cards)
         if discardCards: # discard a card which occurs twice in your hand
             return cards.index(discardCards[0]) + 4
-        discardCards = list(filter(lambda x: x['name'] in dont_play, cards))
+        discardCards = [card for card in cards if card['name'] in dont_play]
         if discardCards: # discard a card which will be played by this clue
             return cards.index(discardCards[0]) + 4
         # Otherwise clue
@@ -207,7 +207,7 @@ class HatPlayer(AIPlayer):
         """Find the least bad card to discard"""
         discardCards = get_nonvisible_cards(cards, \
                                         r.discardpile + self.futurediscarded)
-        discardCards = list(filter(lambda x: x['name'][0] != '5', discardCards))
+        discardCards = [card for card in discardCards if card['name'][0] != '5']
         assert all(map(lambda x: x['name'][0] != '1', discardCards))
         if discardCards: # discard a card which is not unsafe to discard
             discardCard = find_highest(discardCards)
