@@ -12,7 +12,6 @@ Common attributes/arguments:
 
 import random
 import logging
-from copy import deepcopy
 import sys
 
 VANILLA_SUITS = 'rygbw'
@@ -127,7 +126,7 @@ class Round(object):
             for number in SUIT_CONTENTS:
                 deck.append(number + suit)
 
-        self.cardsLeft = deepcopy(deck) # Start tracking unplayed cards.
+        self.cardsLeft = deck[:] # Start tracking unplayed cards.
 
         random.shuffle(deck)
         self.deck = deck
@@ -184,8 +183,8 @@ class Round(object):
         with self.PolicedHand(self.isPoliced, hand):
             play = playType, playValue = p.play(self)
         self.playHistory.append(play)
-        self.HandHistory.append(deepcopy(self.h))
-        self.progressHistory.append(deepcopy(self.progress))
+        self.HandHistory.append(self.h[:])
+        self.progressHistory.append(dict.copy(self.progress))
 
         verboseHandAtStart = ' '.join([card['name'] for card in hand.cards])
         if playType == 'hint':
