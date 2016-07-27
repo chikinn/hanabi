@@ -14,7 +14,7 @@ class CheatingIdiotPlayer(AIPlayer):
         return 'idiot'
 
     def __init__(self, *args):
-    	"""Can be overridden to perform initialization, but must call super"""
+        """Can be overridden to perform initialization, but must call super"""
         super(CheatingIdiotPlayer, self).__init__(*args)
 
     def play(self, r):
@@ -28,5 +28,5 @@ class CheatingIdiotPlayer(AIPlayer):
             return 'play', random.choice(playableCards)
 
     def end_game_logging(self):
-    	"""Can be overridden to perform logging at the end of the game"""
-    	pass
+        """Can be overridden to perform logging at the end of the game"""
+        pass
