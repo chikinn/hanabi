@@ -183,7 +183,6 @@ class Round(object):
         with self.PolicedHand(self.isPoliced, hand):
             play = playType, playValue = p.play(self)
         self.playHistory.append(play)
-        self.HandHistory.append(self.h[:])
         self.progressHistory.append(dict.copy(self.progress))
 
         verboseHandAtStart = ' '.join([card['name'] for card in hand.cards])
