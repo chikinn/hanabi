@@ -8,9 +8,7 @@ Created on Sun Apr 17 15:11:03 2016
 from copy import deepcopy as c
 import itertools as it
 import numpy as np
-#import sys
-#import random
-#
+
 from hanabi_classes import AIPlayer
 
 # This AI is designed to implement an information encoding algorithm
@@ -60,11 +58,11 @@ class EncodingPlayer(AIPlayer):
         self.CodeList.append('0S_all__1S_all')
     
     def play(self, r):
+        r.HandHistory.append(c(r.h))
         nPriorTurns = len(r.playHistory)
         if r.suits != 'rygbw':
             raise NameError('Encoding AI requires vanilla suits\n')
         for i in r.NameRecord:
-            print(i)
             if i[:-1] != 'Encoder':
                 raise NameError('Encoding AI must only play with other encoders')
         if r.nPlayers != 5:
