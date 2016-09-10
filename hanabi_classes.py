@@ -10,9 +10,7 @@ Common attributes/arguments:
   names (list of str): How players are identified in printed output.
 """
 
-import random
-import logging
-import sys
+import random, logging, sys
 
 VANILLA_SUITS = 'rygbw'
 SUIT_CONTENTS = '1112233445' # must be ascending
@@ -22,7 +20,7 @@ RAINBOW_SUIT  = '?'
 PURPLE_SUIT   = 'p'
 
 class AIPlayer(object):
-    """AIPlayer class that should be inherited from when making """
+    """AIPlayer class that should be inherited from when making"""
     def __init__(self, me, logger, verbosity):
         super(AIPlayer, self).__init__()
         self.logger = logger
@@ -101,19 +99,18 @@ class Round(object):
 
         self.logger = logging.getLogger('game_log')
 
-        self.NameRecord = names # Added so that AI can check what players it is playing with
+        self.NameRecord = names # Allows AI to check who its teammates are.
         self.PlayerRecord = players
-        self.DropIndRecord = [] # Keeps track of the index of the dropped card
+        self.DropIndRecord = [] # Keeps track of the index of the dropped card.
         self.Resign = False
         self.discardpile = []
 
-        # This provides a shared starting seed if players wish to use fixed
-        # seed psudo RNG methods.
+        # Provides a shared starting seed for fixed-seed pseudo RNG methods.
         self.CommonSeed = random.randint(0,sys.maxsize)
 
         if not len(self.logger.handlers):
-            # Define logging handlers if not defined by wrapper script
-            # Will only happen a single time, even for multiple games
+            # Define logging handlers if not defined by wrapper script.
+            # Will only happen a single time, even for multiple games.
             ch = logging.FileHandler('games.log') if self.log \
                                             else logging.StreamHandler()
             ch.setLevel(logging.INFO)
@@ -145,8 +142,6 @@ class Round(object):
         """Remove and return the top card of the deck."""
         return self.deck.pop(0)
 
-    # Discards card from hand, then attempts to draw a new card.
-    # Returns true if there was still a card to draw.
     def replace_card(self, card, hand):
         """Drop the card, draw a new one, and update public info."""
         if not card['known']:
@@ -156,10 +151,10 @@ class Round(object):
         self.discardpile.append(card['name'])
         if self.deck != []:
             hand.add(self.draw(), self.turnNumber)
-            return True
+            return True # There was still a card to draw.
         return False
 
-    def printAllKnowledge(self):
+    def print_all_knowledge(self):
         for i in range(self.nPlayers):
             allCards = []
             directKnowledge = []
@@ -176,7 +171,7 @@ class Round(object):
 
     def get_play(self, p):
         """Retrieve and execute AI p's play for whoever's turn it is."""
-        if self.log and self.turnNumber != 0: self.printAllKnowledge()
+        if self.log and self.turnNumber != 0: self.print_all_knowledge()
 
         play = playType = playValue = None
         hand = self.h[self.whoseTurn]
@@ -189,7 +184,7 @@ class Round(object):
         if playType == 'hint':
             assert self.hints != 0
             targetPlayer, info = playValue
-            assert targetPlayer != self.whoseTurn # cannot hint self
+            assert targetPlayer != self.whoseTurn # Cannot hint self.
             targetHand = self.h[targetPlayer]
             for card in targetHand.cards:
                 suit = card['name'][1]
@@ -203,8 +198,8 @@ class Round(object):
             desc = '{} to {}'.format(info, self.h[targetPlayer].name)
 
         elif playType == 'resign':
-                self.Resign = True
-                desc        = ''
+            self.Resign = True
+            desc        = ''
 
         else:
             card = playValue
