@@ -9,8 +9,8 @@ def get_plays(cards, progress):
     """Return a list of plays (subset of input); call only on visible cards!"""
     return [card for card in cards if is_playable(card, progress)]
 
-def is_cardname_playable(card_name, progress):
-    return progress[card_name[1]] + 1 == int(card_name[0])
+def is_cardname_playable(cardName, progress):
+    return progress[cardName[1]] + 1 == int(cardName[0])
 
 def is_playable(card, progress):
     return is_cardname_playable(card["name"], progress)
@@ -86,10 +86,10 @@ def playable_cards(progress):
     return [str(value+1) + suit for suit, value in progress.items()
                 if value < 5]
 
-def cards_possibly_in_set(card, card_name_array):
+def cards_possibly_in_set(card, cardNameArray):
     """Given a list of card names, return only those which are consistent
        with the hinted information about card (non-visible)."""
-    return [name for name in card_name_array
+    return [name for name in cardNameArray
             if (all(matches(name, hint) for hint in card['direct']) and not
                 any(matches(name, hint) for hint in card['indirect']))]
 
