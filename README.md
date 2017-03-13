@@ -56,7 +56,7 @@ or
   Plays newest hinted card (and hints accordingly), discards oldest card
 * **Encoding** (`encoder`) & **General Encoding** (`gencoder`) by Taylor Robie<br>
   Experimental, hints counter-intuitively, Python 2 only (todo: 3!)
-* **Hat Player** (`hat`) by Floris van Doorn<br>
+* **Hat Player** (`hat`) by FvD<br>
   Uses "hat guessing" techniques to convey information to all other players with a single hint. Needs at least 4 players. Has about 80% win rate.
 * **Human** (`human`) by GH<br>
   Allows you to play alongside the AIs (works best on `-v silent` or `log`)
