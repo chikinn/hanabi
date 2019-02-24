@@ -41,6 +41,9 @@ parser.add_argument('-s', '--seed', default=-1,
 parser.add_argument('-p', '--police',
   dest='police', action='store_true', help='Turns on the police to catch cheaters')
 parser.set_defaults(police=False)
+parser.add_argument('-o', '--output',
+  dest='output', action='store_true', help='Output a JSON file of the game in log.json')
+parser.set_defaults(output=False)
 
 args = parser.parse_args()
 
@@ -115,7 +118,7 @@ for i in range(args.n_rounds):
     if args.verbosity in ('verbose', 'log'):
         logger.info('\n' + 'ROUND {}:'.format(i))
     score = play_one_round(args.game_type, players, names, args.verbosity,
-                           args.loss_score, args.police)
+                           args.loss_score, args.police, args.output)
     scores.append(score)
     if args.verbosity != 'silent':
         logger.info('Score: ' + str(score))

@@ -127,13 +127,15 @@ class Round(object):
 
         random.shuffle(deck)
         self.deck = deck
+        self.startingDeck = deck[:]
+        self.startingDeckSize = len(deck)
 
         handSize = 4
         if self.nPlayers < 4:
             handSize += 1
         for i in range(self.nPlayers): # Deal cards to all players.
             for j in range(handSize):
-                self.h[i].add(self.draw(), self.turnNumber - handSize + j)
+                self.h[i].add(self.draw(), self.turnNumber - handSize + j, self.startingDeckSize-len(self.deck)-1)
             if self.verbose:
                 self.h[i].show(self.zazz[0], self.logger)
                 self.zazz[0] = ' ' * len(self.zazz[0])
@@ -150,7 +152,7 @@ class Round(object):
         self.DropIndRecord.append(ReplacedIndex)
         self.discardpile.append(card['name'])
         if self.deck != []:
-            hand.add(self.draw(), self.turnNumber)
+            hand.add(self.draw(), self.turnNumber, self.startingDeckSize-len(self.deck)-1)
             return True # There was still a card to draw.
         return False
 
@@ -257,14 +259,15 @@ class Round(object):
             out = [card['name'] for card in self.cards]
             logger.info(zazz + ' ' + self.name + ': ' + ' '.join(out))
 
-        def add(self, newCard, turnNumber):
+        def add(self, newCard, turnNumber, cardNo):
             """Add a card to the hand."""
             self.cards.append({ 'name'     : newCard,
                                 'time'     : turnNumber,
                                 'direct'   : [],
                                 'indirect' : [],
                                 'known'    : False,
-                                'sec_name' : newCard})
+                                'sec_name' : newCard,
+                                'cardNo'   : cardNo })
 
         def drop(self, card):
             """Discard a card from the hand."""
