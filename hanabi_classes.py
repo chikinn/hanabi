@@ -148,6 +148,7 @@ class Round(object):
         """Drop the card, draw a new one, and update public info."""
         if not card['known']:
             self.cardsLeft.remove(card['name'])
+        card['position'] = hand.cards.index(card)
         ReplacedIndex = hand.drop(card)
         self.DropIndRecord.append(ReplacedIndex)
         self.discardpile.append(card['name'])
@@ -245,6 +246,8 @@ class Round(object):
             a color or a number; chronological; duplicates allowed
           indirect (list of char): same as direct but info does not match card
           known (bool): whether card can be deduced solely from public info
+          cardNo (int): unique number of the card
+          position (int): the position from which the card was played or discarded (0-4). Equals -1 if still in hand
         seat (int): Player ID number (starting player is 0).
         """
 
@@ -267,7 +270,8 @@ class Round(object):
                                 'indirect' : [],
                                 'known'    : False,
                                 'sec_name' : newCard,
-                                'cardNo'   : cardNo })
+                                'cardNo'   : cardNo,
+                                'position' : -1 })
 
         def drop(self, card):
             """Discard a card from the hand."""

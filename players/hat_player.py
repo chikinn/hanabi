@@ -45,9 +45,11 @@ class HatPlayer(AIPlayer):
         the start of the turn of the player who was first targeted by this clue.
         This function accesses only information known to `me`."""
         assert self == r.PlayerRecord[me]
+        n = r.nPlayers
+        if me != (r.whoseTurn - 1) % n and len(r.playHistory) > 0:
+            self.think_out_of_turn(me, (r.whoseTurn - 1) % n, r)
         if not (self.im_clued and self.first_clued == r.whoseTurn):
             return
-        n = r.nPlayers
         self.next_player_actions = []
         self.initialize_future_prediction(0, r)
         self.initialize_future_clue(r)
@@ -60,11 +62,12 @@ class HatPlayer(AIPlayer):
             self.finalize_future_action(x, i, me, r)
             i = (i - 1) % n
 
-    def think_out_of_turn(self, me, player, action, r):
-        """ self (players[me]) thinks out of turn during the turn of `me`.
+    def think_out_of_turn(self, me, player, r):
+        """ self (players[me]) thinks out of turn after the action of `player`.
         This function accesses only information known to `me`."""
         assert self == r.PlayerRecord[me]
         n = r.nPlayers
+        action = r.playHistory[-1]
         # The following happens if n-1 players in a row don't clue
         if self.last_clued_any_clue == (player - 1) % n:
             self.last_clued_any_clue = player
@@ -212,11 +215,11 @@ class HatPlayer(AIPlayer):
             return 'discard', n - 4
         return 'hint', 0
 
-    def action_to_number(self, play):
+    def action_to_number(self, action):
         """Returns number corresponding to an action. """
-        if play[0] == 'hint':
+        if action[0] == 'hint':
             return 8
-        return play[1] + (0 if play[0] == 'play' else 4)
+        return action[1]['position'] + (0 if action[0] == 'play' else 4)
 
     def clue_to_number(self, clue):
         """Returns number corresponding to a clue.
@@ -244,8 +247,6 @@ class HatPlayer(AIPlayer):
         me = r.whoseTurn
         cards = r.h[me].cards
         self.reset_memory()
-        for i in other_players(me, r):
-            r.PlayerRecord[i].think_out_of_turn(i, me, myaction, r)
         if myaction[0] == 'discard' and r.hints == 8 and r.verbose:
             print("Cheating! Discarding with 8 available hints")
         if myaction[0] == 'discard' and 0 < len(r.deck) < \
