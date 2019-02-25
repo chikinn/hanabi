@@ -43,10 +43,7 @@ def play_one_round(gameType, players, names, verbosity, lossScore, isPoliced,wri
             break # Resignation for debug purposes
 
         if r.lightning == N_LIGHTNING:
-            if lossScore == 'zero':
-                return 0 # Award no points for a loss...
-            elif lossScore == 'full':
-                break    # ... unless user wants the full score.
+            break # The game ends by having three strikes
 
         r.get_play(players[r.whoseTurn]) # Play one turn.
 
@@ -67,6 +64,8 @@ def play_one_round(gameType, players, names, verbosity, lossScore, isPoliced,wri
         with io.open('log.json', 'w', encoding='utf-8') as f:
             f.write(json.dumps(output, ensure_ascii=False))
 
+    if r.lightning == N_LIGHTNING and lossScore == 'zero':
+        return 0 # Award no points for a loss
     return sum(r.progress.values()) # Final score
 
 def player_end_game_logging(players):
