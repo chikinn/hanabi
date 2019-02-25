@@ -72,28 +72,23 @@ class HatPlayer(AIPlayer):
         if self.last_clued_any_clue == (player - 1) % n:
             self.last_clued_any_clue = player
         # Update the clue value given to me
-        if self.im_clued and\
-        self.is_between(player, self.first_clued, self.last_clued):
-            self.clue_value = \
-            (self.clue_value - self.action_to_number(action)) % 9
+        if self.im_clued and self.is_between(player, self.first_clued, self.last_clued):
+            self.clue_value = (self.clue_value - self.action_to_number(action)) % 9
         if action[0] != 'hint':
             return
         target, value = action[1]
-        if self.clue_to_number(value) == -1:
-            return
         if self.im_clued:
-            self.last_clued_any_clue = action[1][0]
-            self.later_clues.append((target, self.clue_to_number(value)))
+            self.last_clued_any_clue = (player - 1) % n
+            self.later_clues.append(((player - 1) % n, self.clue_to_number(target, value, player, r)))
             return
         self.first_clued = (self.last_clued_any_clue + 1) % n
-        self.last_clued_any_clue = target
-        if not self.is_between(me, self.first_clued, target):
+        self.last_clued_any_clue = (player - 1) % n
+        if not self.is_between(me, self.first_clued, self.last_clued_any_clue):
             return
         self.im_clued = True
-        self.last_clued = target
-        self.clue_value = self.clue_to_number(value)
+        self.last_clued = self.last_clued_any_clue
+        self.clue_value = self.clue_to_number(target, value, player, r)
         self.later_clues = []
-
 
     def standard_play(self, cards, me, dont_play, progress, decksize, hints, r):
         """Returns a number 0-8 coding which action should be taken by player
@@ -221,22 +216,51 @@ class HatPlayer(AIPlayer):
             return 8
         return action[1]['position'] + (0 if action[0] == 'play' else 4)
 
-    def clue_to_number(self, clue):
-        """Returns number corresponding to a clue.
-        Returns -1 on clues not matching the pattern"""
-        if clue == '5':
-            if r.verbose:
-                print("Invalid clue received")
-            return -1
-        if clue in '1234':
-            return int(clue) - 1
-        return 4 + VANILLA_SUITS.find(clue)
-
-    def number_to_clue(self, n):
+    def clue_to_number(self, target, value, clueGiver, r):
         """Returns number corresponding to a clue."""
-        if n < 4:
-            return str(n+1)
-        return VANILLA_SUITS[n-4]
+        cards = r.h[target].cards
+        if len(cards[0]['indirect']) > 0 and cards[0]['indirect'][-1] == value:
+            x = 2
+        elif value in r.suits:
+            x = 1
+        else:
+            x = 0
+        nr = 3 * ((target - clueGiver - 1) % r.nPlayers) + x
+        #print("(",clueGiver," gives ",target,value,")->",nr)
+        return nr
+
+    def number_to_clue(self, cluenumber, me, r):
+        """Returns number corresponding to a clue."""
+        target = (me + 1 + cluenumber // 3) % r.nPlayers
+        assert target != me
+        cards = r.h[target].cards
+        x = cluenumber % 3
+        clue = ''
+        if x == 0: clue = cards[0]['name'][0]
+        if x == 1:
+            if cards[0]['name'][1] != RAINBOW_SUIT:
+                clue = cards[0]['name'][1]
+            else:
+                clue = VANILLA_SUITS[2]
+        if x == 2:
+            for i in range(1,len(cards)):
+                if cards[i]['name'][0] != cards[0]['name'][0]:
+                    clue = cards[i]['name'][0]
+                    break
+                if cards[i]['name'][1] != cards[0]['name'][1] and cards[0]['name'][1] != RAINBOW_SUIT:
+                    if cards[i]['name'][1] != RAINBOW_SUIT:
+                        clue = cards[i]['name'][1]
+                    elif cards[0]['name'][1] != VANILLA_SUITS[0]:
+                        clue = VANILLA_SUITS[0]
+                    else:
+                        clue = VANILLA_SUITS[1]
+                    break
+        if clue == '':
+            if r.verbose:
+                print("Cannot give a clue which doesn't touch the newest card in the hand of player ", target)
+            clue = cards[0]['name'][0]
+        #print(cluenumber,"(",x,")->",target,clue)
+        return (target, clue)
 
     def execute_action(self, myaction, r):
         """In the play function return the final action which is executed.
@@ -263,7 +287,7 @@ class HatPlayer(AIPlayer):
     def initialize_future_prediction(self, penalty, r):
         """Do this at the beginning of predicting future actions.
         Penalty is 1 if you're currently cluing, meaning that there is one
-        fewer turn after your turn"""
+        fewer hint token after your turn"""
         self.futureprogress = copy(r.progress)
         self.futuredecksize = len(r.deck)
         self.futurehints = r.hints - penalty
@@ -347,7 +371,6 @@ class HatPlayer(AIPlayer):
         me = r.whoseTurn
         n = r.nPlayers
         progress = r.progress
-        cards = r.h[me].cards
         # Some first turn initialization
         if len(r.playHistory) < n:
             for p in r.PlayerRecord:
@@ -435,8 +458,8 @@ class HatPlayer(AIPlayer):
         # Now I should determine what I'm going to clue
         cluenumber = 0
         self.initialize_future_clue(r)
-        target = (me - 1) % n
-        i = target
+
+        i = (me - 1) % n
           # What should all players after the next player do?
         while i != (self.last_clued_any_clue + 1) % n:
             x = self.standard_play(r.h[i].cards, i, self.will_be_played,\
@@ -450,8 +473,7 @@ class HatPlayer(AIPlayer):
         x = self.modified_play(r.h[i].cards, me, i, self.will_be_played,\
                 self.futureprogress, self.futuredecksize, self.futurehints, r)
         cluenumber = (cluenumber + x) % 9
-        clue = self.number_to_clue(cluenumber)
-        # I'm going to clue (target, clue)
-        myaction = 'hint', (target, clue)
-        self.last_clued_any_clue = target
+        clue = self.number_to_clue(cluenumber, me, r)
+        myaction = 'hint', clue
+        self.last_clued_any_clue = (me - 1) % n
         return self.execute_action(myaction, r)

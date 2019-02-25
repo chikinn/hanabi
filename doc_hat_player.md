@@ -239,6 +239,8 @@ corresponding clue.
 
 ## Clue encoding
 
+[Update February 2019: `hat_player` now doesn't give empty clues anymore.]
+
 There are two variants of Hanabi. One variant allows you to give a clue pointing to 0 cards ("You
 have no blue cards in your hand") while the other disallows it. The first variant is slightly
 easier, especially for a strategy using a coding function for the clues, because in that variant
