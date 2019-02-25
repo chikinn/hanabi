@@ -6,8 +6,8 @@ description of the strategy. The following table gives the approximate
 percentages of this strategy reaching maximum score.
 Players | % (6 suits) | % (5 suits)
 --------+-------------+------------
-   4    |     79      |     84
-   5    |     87      |    79-80
+   4    |     80      |    84.5
+   5    |    86.5     |     80
 
 """
 

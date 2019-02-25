@@ -123,6 +123,7 @@ for i in range(args.n_rounds):
     if args.verbosity != 'silent':
         logger.info('Score: ' + str(score))
     player_end_game_logging(players)
+    args.output = False # we don't have to log multiple games
 
 # Print average scores.
 if args.verbosity != 'silent':
