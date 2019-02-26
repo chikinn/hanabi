@@ -55,7 +55,7 @@ class HatPlayer(AIPlayer):
         while i != me:
             x = self.standard_action(self.given_clues[0]['cluer'], i, self.will_be_played, r.progress, {}, r)
             self.next_player_actions.append(x)
-            self.given_clues[0]['value'] = (self.given_clues[0]['value'] - x) % 9
+            self.given_clues[0]['value'] = (self.given_clues[0]['value'] - self.action_to_number(x)) % 9
             self.finalize_future_action(x, i, me, r)
             i = (i - 1) % n
 
@@ -71,9 +71,10 @@ class HatPlayer(AIPlayer):
             self.last_clued_any_clue = player
         # Update the clue value given to me
         if self.im_clued and self.is_between(player, self.given_clues[0]['first'], self.given_clues[0]['last']):
-            x = self.action_to_number(action)
-            if x == 8 and not (player == self.given_clues[0]['first'] and MODIFIEDPLAY):
-                x = self.given_clues[0]['discards'][player]
+            x = self.external_action_to_number(action)
+            if self.number_to_action(x)[0] == 'hint' and not (player == self.given_clues[0]['first'] and MODIFIEDPLAY):
+                # the player was instructed to discard, but decided to hint instead
+                x = self.action_to_number(self.given_clues[0]['discards'][player])
             self.given_clues[0]['value'] = (self.given_clues[0]['value'] - x) % 9
         if action[0] != 'hint':
             return
@@ -96,17 +97,13 @@ class HatPlayer(AIPlayer):
         """The standard action if you don't play"""
         assert self != r.PlayerRecord[player]
         # Do I want to discard?
-        x = self.easy_discards(cards, progress, r)
-        if x:
-            return x
-        else:
-            return 8
+        return self.easy_discards(cards, progress, r)
 
     def standard_action(self, cluer, player, dont_play, progress, dic, r):
-        """Returns a number 0-8 coding which action should be taken by `player`.
-        0-3 means play card 0-3.
-        4-7 means discard card 0-3
-        8 means clue something.
+        """Returns which action should be taken by `player`. Uses the internal encoding of actions:
+        'play', n means play slot n (note: slot n, or r.h[player].cards[n] counts from oldest to newest, so slot 0 is oldest)
+        'discard', n means discard slot n
+        'hint', 0 means give a hint
         `cluer` is the player giving the clue
         `player` is the player doing the standard_action
         `dont_play` is the list of cards played by other players
@@ -122,7 +119,7 @@ class HatPlayer(AIPlayer):
         if playableCards:
             playableCards.reverse()
             wanttoplay = find_lowest(playableCards)
-            return cards.index(wanttoplay)
+            return 'play', cards.index(wanttoplay)
         # I cannot play
         return self.standard_nonplay(cards, player, progress, r)
 
@@ -142,36 +139,36 @@ class HatPlayer(AIPlayer):
             return x
         # If you were instructed to play, and you can play a 5 which will help
         # a future person to clue, do that.
-        if x < 4:
-            if self.min_futurehints <= 0 and cards[x]['name'][0] != '5':
+        if x[0] == 'play':
+            if self.min_futurehints <= 0 and cards[x[1]]['name'][0] != '5':
                 playablefives = [card for card in get_plays(cards, progress)
                         if card['name'][0] == '5']
                 if playablefives:
                     if r.verbose:
                         print('play a 5 instead')
-                    return cards.index(playablefives[0])
+                    return 'play', cards.index(playablefives[0])
             return x
 
         # If you are at 8 hints, hint
         if self.modified_hints >= 8:
-            return 8
-        if x == 8 and (not self.cards_played) and (not self.futureplays) and r.verbose:
+            return 'hint', 0
+        if x[0] == 'hint' and (not self.cards_played) and (not self.futureplays) and r.verbose:
             print('nobody can play!')
 
         # Sometimes you want to discard instead of hint. This happens if either
         # - someone is instructed to hint without clues
         # - everyone else will hint
         # - everyone else will hint or discard, and it is not the endgame
-        if x == 8 and (self.min_futurehints <= 0 or\
+        if x[0] == 'hint' and (self.min_futurehints <= 0 or\
         ((not self.cards_played) and (not self.futureplays) and (not self.cards_discarded) and (not self.futurediscards)) or\
         ((not self.cards_played) and (not self.futureplays) and self.futuredecksize >= count_unplayed_playable_cards(r, self.futureprogress))):
             y = self.easy_discards(cards, progress, r)
-            if y:
+            if y[0] == 'discard':
                 if r.verbose:
                     print('discard instead')
                 return y
             y = self.hard_discards(cards, dont_play, progress, r)
-            if y:
+            if y[0] == 'discard':
                 if r.verbose:
                     print('discard instead (ouch)')
                 return y
@@ -185,21 +182,21 @@ class HatPlayer(AIPlayer):
         # Do I want to discard?
         discardCards = get_played_cards(cards, progress)
         if discardCards: # discard a card which is already played
-            return cards.index(discardCards[0]) + 4
+            return 'discard', cards.index(discardCards[0])
         discardCards = get_duplicate_cards(cards)
         if discardCards: # discard a card which occurs twice in your hand
-            return cards.index(discardCards[0]) + 4
+            return 'discard', cards.index(discardCards[0])
         # discardCards = [card for card in cards if card['name'] in dont_play]
         # if discardCards: # discard a card which will be played by this clue
         #     return cards.index(discardCards[0]) + 4
         # Otherwise clue
-        return 0
+        return 'hint', 0
 
     def hard_discards(self, cards, dont_play, progress, r):
         """Find the least bad card to discard"""
         discardCards = [card for card in cards if card['name'] in dont_play]
         if discardCards: # discard a card which will be played by this clue
-            return cards.index(discardCards[0]) + 4
+            return 'discard', cards.index(discardCards[0])
         # discard a card which is not yet in the discard pile, and will not be discarded between the cluer and the player
         discardCards = get_nonvisible_cards(cards, \
                                         r.discardpile + self.futurediscarded)
@@ -207,8 +204,8 @@ class HatPlayer(AIPlayer):
         assert all(map(lambda x: x['name'][0] != '1', discardCards))
         if discardCards: # discard a card which is not unsafe to discard
             discardCard = find_highest(discardCards)
-            return cards.index(discardCard) + 4
-        return 0
+            return 'discard', cards.index(discardCard)
+        return 'hint', 0
 
 
     def is_between(self, x, begin, end):
@@ -226,17 +223,24 @@ class HatPlayer(AIPlayer):
 
     def number_to_action(self, n):
         """Returns action corresponding to a number."""
-        if n < 4:
-            return 'play', n
-        elif n < 8:
-            return 'discard', n - 4
-        return 'hint', 0
+        if n == 0:
+            return 'hint', 0
+        elif n <= 4:
+            return 'play', n - 1
+        return 'discard', n - 5
+
+    def external_action_to_number(self, action):
+        """Returns number corresponding to an action in the log. """
+        if action[0] == 'hint':
+            return 0
+        return action[1]['position'] + (1 if action[0] == 'play' else 5)
 
     def action_to_number(self, action):
-        """Returns number corresponding to an action. """
+        """Returns number corresponding to an action as represented in this bot
+        (where the second component is the *position* of the card played/discarded). """
         if action[0] == 'hint':
-            return 8
-        return action[1]['position'] + (0 if action[0] == 'play' else 4)
+            return 0
+        return action[1] + (1 if action[0] == 'play' else 5)
 
     def clue_to_number(self, target, value, clueGiver, r):
         """Returns number corresponding to a clue."""
@@ -334,16 +338,16 @@ class HatPlayer(AIPlayer):
     def finalize_future_action(self, action, i, me, r):
         """When predicting future actions, do this after every action"""
         assert i != me
-        if action < 8:
-            if action < 4:
+        if action[0] != 'hint':
+            if action[0] == 'play':
                 self.cards_played += 1
-                self.will_be_played.append(r.h[i].cards[action]['name'])
-                if r.h[i].cards[action]['name'][0] == '5':
+                self.will_be_played.append(r.h[i].cards[action[1]]['name'])
+                if r.h[i].cards[action[1]]['name'][0] == '5':
                     self.hint_changes.append(1)
             else:
                 self.cards_discarded += 1
                 self.hint_changes.append(2)
-                self.futurediscarded.append(r.h[i].cards[action - 4]['name'])
+                self.futurediscarded.append(r.h[i].cards[action[1]]['name'])
         else:
             self.hint_changes.append(-1)
 
@@ -423,7 +427,7 @@ class HatPlayer(AIPlayer):
                     return self.execute_action(myaction, r)
                 #todo: also discard when you steal the last clue from someone who has to clue
                 #clue if I can get tempo on a unclued card or if at 8 hints
-                if r.hints != 8 and not(all(map(lambda a:a < 4, self.next_player_actions)) and\
+                if r.hints != 8 and not(all(map(lambda a:a[0] == 'play', self.next_player_actions)) and\
                 get_plays(r.h[(self.last_clued_any_clue + 1) % n].cards, progress)): #todo: this must be checked after current clued cards are played
                     #if not in endgame, or with at most 1 clue, discard
                     if len(r.deck) >= count_unplayed_playable_cards(r, r.progress):
@@ -462,9 +466,9 @@ class HatPlayer(AIPlayer):
             while i != d['first']:
                 x = self.standard_action(me, i, self.will_be_played, self.futureprogress, {}, r)
                 self.finalize_future_action(x, i, me, r)
-                d['value'] = (d['value'] - x) % 9
+                d['value'] = (d['value'] - self.action_to_number(x)) % 9
                 i = (i - 1) % n
-            self.finalize_future_action(d['value'], i, me, r)
+            self.finalize_future_action(self.number_to_action(d['value']), i, me, r)
             self.finalize_future_clue(r)
 
         # Now I should determine what I'm going to clue
@@ -476,14 +480,14 @@ class HatPlayer(AIPlayer):
         # What should all players - except the first - do?
         while i != (self.last_clued_any_clue + 1) % n:
             x = self.standard_action(me, i, self.will_be_played, self.futureprogress, {}, r)
-            cluenumber = (cluenumber + x) % 9
+            cluenumber = (cluenumber + self.action_to_number(x)) % 9
             self.finalize_future_action(x, i, me, r)
             i = (i - 1) % n
         # What should the first player that I'm cluing do?
         self.count_hints(r)
         assert i != me
         x = self.modified_action(me, i, self.will_be_played, self.futureprogress, {}, r)
-        cluenumber = (cluenumber + x) % 9
+        cluenumber = (cluenumber + self.action_to_number(x)) % 9
         clue = self.number_to_clue(cluenumber, me, r)
         myaction = 'hint', clue
         self.last_clued_any_clue = (me - 1) % n
