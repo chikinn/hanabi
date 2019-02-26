@@ -3,12 +3,13 @@
 A strategy for 4 or 5 players which uses "hat guessing" to convey information
 to all other players with a single clue. See doc_hat_player.md for a detailed
 description of the strategy. The following table gives the approximate
- percentages of this strategy reaching maximum score.
-Players | % (6 suits) | % (5 suits)
+percentages of this strategy reaching maximum score.
+(over 10000 games, rounded to the nearest 0.5%).
+The standard error is 0.3-0.4pp, so it could maybe be a pp off.
+Players | % (5 suits) | % (6 suits)
 --------+-------------+------------
-   4    |     80      |    84.5
-   5    |    86.5     |     80
-
+   4    |     86      |     84
+   5    |     81      |     87.5
 """
 
 from hanabi_classes import *
@@ -130,7 +131,7 @@ class HatPlayer(AIPlayer):
         be smarter than standard_action"""
         # note: in this command: self.futuredecksize and self.futureprogress and self.futureplays and self.futurediscards only counts the turns before `player`
         # self.cards_played and self.cards_discarded only counts the cards drawn by the current clue (so after `player`)
-        # self.min_futurehints and self.max_futurehints include all turns before and after `player`
+        # self.min_futurehints, self.futurehints and self.max_futurehints include all turns before and after `player`
 
         # this is never called on a player's own hand
         assert self != r.PlayerRecord[player]
@@ -163,9 +164,13 @@ class HatPlayer(AIPlayer):
         # - someone is instructed to hint without clues
         # - everyone else will hint
         # - everyone else will hint or discard, and it is not the endgame
-        if self.min_futurehints <= 0 or\
+        if self.min_futurehints <= 0 or self.futurehints <= 1 or \
         ((not self.cards_played) and (not self.futureplays) and (not self.cards_discarded) and (not self.futurediscards)) or\
         ((not self.cards_played) and (not self.futureplays) and self.futuredecksize >= count_unplayed_playable_cards(r, self.futureprogress)):
+            if self.futurehints <= 1 and r.verbose:
+                print("keeping a clue for the next cluer, otherwise they would be at",self.futurehints - 1, "( now at", r.hints,")")
+            if self.min_futurehints <= 0 and r.verbose:
+                print("discarding to make sure everyone can clue, otherwise they would be at", self.min_futurehints - 1, "( now at", r.hints,")")
             y = self.easy_discards(cards, progress, r)
             if y[0] == 'discard':
                 if r.verbose:
@@ -284,7 +289,7 @@ class HatPlayer(AIPlayer):
             else:
                 clue = VANILLA_SUITS[2]
         if x == 2:
-            for i in range(1,len(cards)):
+            for i in range(len(cards)-1):
                 if cards[i]['name'][0] != cards[-1]['name'][0]:
                     clue = cards[i]['name'][0]
                     break
@@ -311,6 +316,7 @@ class HatPlayer(AIPlayer):
         me = r.whoseTurn
         cards = r.h[me].cards
         if myaction[0] == 'discard' and r.hints == 8:
+            # todo: change the game code so that it rejects this
             print("Cheating! Discarding with 8 available hints")
             print("Debug info: me:",me, "given clue: ",self.given_clues[0])
         if myaction[0] == 'discard' and 0 < len(r.deck) < \
@@ -392,20 +398,9 @@ class HatPlayer(AIPlayer):
                 self.min_futurehints = \
                         min(self.futurehints, self.min_futurehints)
                 if self.futurehints < 0:
-                    self.futurehints = 1
-                    if r.verbose:
-                        print('Someone will not be able to clue. (now',\
-                              r.hints, 'hints). Also deck will be',\
-                              self.futuredecksize, '- hints', self.futurehints,\
-                              '- progress', self.futureprogress,\
-                              self.min_futurehints)
+                    self.futurehints = 1 # someone discarded instead of cluing
                 if self.futurehints > 8:
                     self.futurehints = 8
-                    if r.log:
-                        print('A hint will be wasted. (now', r.hints,\
-                              'hints). Also deck will be', self.futuredecksize,\
-                              '- hints', self.futurehints, '- progress',\
-                              self.futureprogress)
 
     def play(self, r):
         me = r.whoseTurn
@@ -426,6 +421,8 @@ class HatPlayer(AIPlayer):
                 # the last player clued by any clue, not necessarily the clue
                 # which is relevant to me. This must be up to date all the time
                 r.PlayerRecord[i].last_clued_any_clue = n - 1
+                # do I have a card which can be safely discarded?
+                r.PlayerRecord[i].safe_discad = -1
         # everyone takes some time to think about the meaning of previously
         # given clues
         for i in range(n):
@@ -438,7 +435,10 @@ class HatPlayer(AIPlayer):
             if myaction[0] == 'discard':
                 #discard in endgame or if I'm the first to receive the clue
                 if r.hints == 0 or (self.given_clues[0]['first'] == me and MODIFIEDACTION):
-                    return self.execute_action(myaction, r)
+                    if r.hints != 8:
+                        return self.execute_action(myaction, r)
+                    elif r.verbose:
+                        print("I have to hint at 8 clues, this will screw up the next players' action.")
                 #todo: also discard when you steal the last clue from someone who has to clue
                 #clue if I can get tempo on a unclued card or if at 8 hints
                 if r.hints != 8 and not(all(map(lambda a:a[0] == 'play', self.next_player_actions)) and\
@@ -457,6 +457,8 @@ class HatPlayer(AIPlayer):
                 print("Cannot clue, because there are no available hints")
             #todo: discard the card so that the next player does something non-terrible
             return self.execute_action(('discard', 3), r)
+            # a problem in one game was: cluer thinks that a player between them and first_clued is going to discard, which is their standard_play.
+            # They decide to clue instead. This causes the number of hints to be 2 smaller than expected, causing the first_clued to be instructed to hint with 0 clues
         # I'm going to hint
         # Before I clue I have to figure out what will happen after my turn
         # because of clues given earlier.
@@ -464,6 +466,7 @@ class HatPlayer(AIPlayer):
         # given to me.
         if self.last_clued_any_clue == (me - 1) % n:
             self.last_clued_any_clue = me
+
 
 
         self.initialize_future_prediction(1, r)
@@ -506,5 +509,7 @@ class HatPlayer(AIPlayer):
         cluenumber = (cluenumber + self.action_to_number(x)) % 9
         clue = self.number_to_clue(cluenumber, me, r)
         myaction = 'hint', clue
+        # todo: at this point decide to discard if your clue is bad and you have a safe discard
+        # or discard if you see that there is already a problem *before* the turn of first_clued
         self.last_clued_any_clue = (me - 1) % n
         return self.execute_action(myaction, r)
