@@ -21,80 +21,280 @@ from copy import copy
 # If false, the clued player can clue instead of discarding
 MODIFIEDACTION = True
 
+
+def next(n, r):
+    """The player after n."""
+    return (n + 1) % r.nPlayers
+
+def prev(n, r):
+    """The player after n."""
+    return (n - 1) % r.nPlayers
+
+def prev_cardname(cardname):
+    """The card with cardname below `cardname`. Doesn't check whether there is a card below"""
+    return str(int(cardname[0]) - 1) + cardname[1]
+
 class HatPlayer(AIPlayer):
 
     @classmethod
     def get_name(cls):
         return 'hat'
 
-    def reset_memory(self):
-        """(re)set memory to standard values except last_clued_any_clue
+    def reset_memory(self, r):
+        """(re)set memory to standard values
 
         All players have some memory about the state of the game, and two
         functions 'think_at_turn_start' and 'interpret_action' will update memory
-        during opponents' turns.
-        This does *not* reset last_clued_any_clue, since that variable should
-        not be reset during the round."""
-        self.im_clued = False         # Am I clued?
-        # what the other players will do with that clue, in reverse order
-        self.next_player_actions = []
-        # information of all still-relevant clues given. They consist of a 5-tuples: first target, last target, clue value, discard info
+        during opponents' turns."""
+        ### self.im_clued = False         # Am I clued? Should be equivalent to self.given_clues != []
+        # information of all clues given, which are not fully interpreted yet. It is a list of given clues
+        # Every clue consists of a dict with as info:
+        # ### 'first': the first player affected by the clue, which is given modified_action. This skips players who are playing by a previous clue.
+        # 'value': clue value
+        # ### 'discards':
+        # 'cluer': the player who clued
+        # 'plays': the plays that happened after the clue, stored as a list of action, cardname (cardname is the name of the played/discarded card, or "" if a hint is given)
         self.given_clues = []
+        ### The following four variables consist of extra information about the 0-th given_clue
+        # what the other players will do with that clue, in turn order
+        self.next_player_actions = []
+        # The player who receives the modified action from the current clue
+        self.modified_player = -1
+        # for every player (other than me or cluer) what their standard action is if they don't have a play
+        self.expected_discards = {}
+        # the state of the piles after all players play into the *previous* clue. The 0-th clue can instruct players to play cards on top of *these*
+        self.futureprogress = {suit : 0 for suit in r.suits}
+
+        # the last player clued by any clue, not necessarily the clue
+        # which is relevant to me. This must be up to date all the time
+        ### self.last_clued_any_clue = r.nPlayers - 1
+        # do I have a card which can be safely discarded?
+        self.safe_discard = None
+        # the players who will still play the cards that need to be played from the already interpreted clues
+        # stored as a dictionary card_name: player (e.g. "1y": 0)
+        self.card_to_player = {}
+        # stores items like 0: n if player 0 is intstructed to play slot n
+        self.player_to_card = {}
+        # stores the actions between the cluer and the modified_player. Only used when the player is deciding whether to clue
+        self.actions_before_modified = []
+
+    def resolve_next_player_actions(self, me, r):
+        """Updates variables using next_player_actions"""
+        # is this necessary?
+        self.futureprogress = r.progress.copy()
+        i = next(me, r)
+        for x in self.next_player_actions:
+            if x[0] == 'play':
+                name = r.h[i].cards[x[1]]['name']
+                # if either of the next two keys already existed, they already had the value below
+                self.card_to_player[name] = i
+                self.player_to_card[i] = x[1]
+                self.futureprogress[name[1]] = int(name[0])
+            i = next(i, r)
+        assert i == me or i == self.given_clues[0]['cluer']
+
+    def initialize_given_clue(self, cluer, me, r):
+        """Figure out the initial meaning of a clue.
+        This is also used to figure out what to clue, except to modified_player.
+        In the latter case, we return the sum of the clue value to all players except modified_player"""
+        assert me not in self.player_to_card
+        assert MODIFIEDACTION # this code needs to be adapted if we set this to False
+        # find out modified_player
+        i = next(cluer, r)
+        while i in self.player_to_card: i = next(i, r)
+        self.modified_player = i
+        # find out expected discards:
+        self.expected_discards = {i:self.standard_nonplay(r.h[i].cards, i, self.futureprogress, r) for i in range(r.nPlayers) if i != me and i != cluer}
+        # find out what players after me and after modified_player will do
+        self.next_player_actions = []
+        self.will_be_played = []
+        # self.initialize_future_prediction(0, r)
+        # self.initialize_future_clue(r)
+        i = prev(cluer, r)
+        value = 0
+        while i != me and i != self.modified_player:
+            x = self.standard_action(cluer, i, self.will_be_played, self.futureprogress, self.card_to_player, self.player_to_card, r)
+            self.next_player_actions.append(x)
+            #print("player",me,"thinks that player",i,"does",x)
+            value += self.action_to_number(x)
+            # self.subtract_action(self.given_clues[0], x)
+            if x[0] == 'play':
+                self.will_be_played.append(r.h[i].cards[x[1]]['name'])
+            # self.finalize_future_action(x, i, me, r)
+            i = prev(i, r)
+        self.next_player_actions.reverse()
+
+        i = next(cluer, r)
+        # figure out the plays that have already happened
+        if cluer != me:
+            for action, cardname in self.given_clues[0]['plays']:
+                value += self.real_action_value(action, cardname, i)
+                i = next(i, r)
+            assert i == r.whoseTurn
+            # If it's my turn, I now know what my action is
+            if i == me:
+                # print("player",me,"sees that the clue of player",cluer,"was value",self.given_clues[0]['value'],
+                # "and other players have done",value,"so I will do",self.number_to_action((self.given_clues[0]['value'] - value) % 9))
+                self.given_clues[0]['value'] = (self.given_clues[0]['value'] - value) % 9
+                return
+
+        # I need to figure out what plays will happen between i and self.modified_player
+        # I don't want to do this if this was a clue directed to me which I just received, because I will update the clue values for these players as they play
+        # This is problematic if it is not my turn yet
+        self.actions_before_modified = []
+        if self.is_between(i, cluer, self.modified_player) and (i == next(me, r) or i == me):
+            while i in self.player_to_card:
+                action = ('play', self.player_to_card[i])
+                self.actions_before_modified.append(action)
+                value += self.action_to_number(action)
+                i = next(i, r)
+            assert i == self.modified_player
+        if cluer == me: return value
+        if self.is_between(self.modified_player, cluer, me):
+            # print("player",me,"sees that the clue of player",cluer,"was value",self.given_clues[0]['value'],
+            # "and other players have done",value,"so remaining is",(self.given_clues[0]['value'] - value) % 9)
+            self.given_clues[0]['value'] = (self.given_clues[0]['value'] - value) % 9
+            return
+        modified_value = (self.given_clues[0]['value'] - value) % 9
+        self.actions_before_modified.append(self.number_to_action(modified_value))
+        #print("I'm player",me,"- the clue by",cluer,"has value",self.modified_player)
+        self.next_player_actions = self.actions_before_modified + self.next_player_actions
+
+    def resolve_given_clues(self, me, r):
+        """Updates variables using given_clues. This is called
+        * on your turn when you were told to discard/hint
+        * after your turn when you played"""
+        while True:
+            if me == r.whoseTurn:
+                myaction = self.number_to_action(self.given_clues[0]['value'])
+                #print("I am instructed to do",myaction)
+                if myaction[0] == 'play':
+                    return myaction
+                if myaction[0] == 'discard':
+                    self.safe_discard = r.h[me].cards[myaction[1]]
+            self.resolve_next_player_actions(me, r)
+            if len(self.given_clues) == 1 and me == r.whoseTurn:
+                return myaction
+            self.given_clues = self.given_clues[1:]
+            if not self.given_clues: break
+            self.initialize_given_clue(self.given_clues[0]['cluer'], me, r)
+
+    def subtract_action(self, d, action):
+        """subtracts `action` from d['value'] """
+        d['value'] = (d['value'] - self.action_to_number(action)) % 9
+
+    def real_action_value(self, action, cardname, player):
+        """The value of the clue that a player received, given his action"""
+        if (action[0] != 'play' and not (player == self.modified_player and MODIFIEDACTION)) or\
+            (action[0] == 'play' and self.futureprogress[cardname[1]] + 1 < int(cardname[0])):
+            # the player was instructed to discard, but decided to hint instead, or was instructed by a later clue to play
+            if player in self.expected_discards:
+                action = self.expected_discards[player]
+            else:
+                print("I made an unexpected move myself",action,cardname, player, self.given_clues[0])
+        return self.action_to_number(action)
+        #self.subtract_action(self.given_clues[0], action)
+
 
     def think_at_turn_start(self, me, r):
         """ self (players[me]) thinks at the start of the turn. They interpret the last action,
         and interpret a clue at the start of the turn of the player first targeted by that clue.
         This function accesses only information known to `me`."""
         assert self == r.PlayerRecord[me]
-        n = r.nPlayers
-        if me != (r.whoseTurn - 1) % n and len(r.playHistory) > 0:
-            self.interpret_action(me, (r.whoseTurn - 1) % n, r)
-        if not (self.im_clued and self.given_clues[0]['first'] == r.whoseTurn):
+        player = prev(r.whoseTurn, r)
+        # if me != (r.whoseTurn - 1) % n:
+        #     self.interpret_action(me, (r.whoseTurn - 1) % n, r)
+        rawaction = r.playHistory[-1]
+        action, cardname, _ = self.interpret_external_action(rawaction)
+        if me == player:
+            if action[0] != 'play': return
+            # if not misplay:
+            #     self.futureprogress[cardname[1]] += 1
+            #     assert self.futureprogress[cardname[1]] == int(cardname[0])
+            for d in self.given_clues:
+                d['plays'].append((action, cardname))
+            self.resolve_given_clues(me, r)
+            assert not self.given_clues
             return
-        self.next_player_actions = []
-        self.initialize_future_prediction(0, r)
-        self.initialize_future_clue(r)
-        i = self.given_clues[0]['last']
-        while i != me:
-            x = self.standard_action(self.given_clues[0]['cluer'], i, self.will_be_played, r.progress, {}, r)
-            self.next_player_actions.append(x)
-            self.given_clues[0]['value'] = (self.given_clues[0]['value'] - self.action_to_number(x)) % 9
-            self.finalize_future_action(x, i, me, r)
-            i = (i - 1) % n
+        # If I'm clued, update my value
+        if self.given_clues:
+            # print("debug",me,"and",self.given_clues[0])
+            # print(me,"thinks this was action",self.real_action_value(action, cardname, player),"- unmodified:",self.action_to_number(action))
+            self.given_clues[0]['value'] -= self.real_action_value(action, cardname, player)
+            self.given_clues[0]['value'] = self.given_clues[0]['value'] % 9
+        # If I predicted this play, remove the prediction
+        if action[0] == 'play' and player in self.player_to_card:
+            # print(me,"predicted that player",player,"would play position",self.player_to_card[player],"and position",action[1],"was played")
+            if self.player_to_card[player] == action[1]:
+                self.player_to_card.pop(player)
+                self.card_to_player.pop(cardname)
+            else:
+                print("This player played the wrong card!")
 
-    def interpret_action(self, me, player, r):
-        """ self (players[me]) interprets the action of `player`,
-        which was the last action in the game.
-        This function accesses only information known to `me`."""
-        assert self == r.PlayerRecord[me]
-        n = r.nPlayers
-        action = r.playHistory[-1]
-        # The following happens if n-1 players in a row don't clue
-        if self.last_clued_any_clue == (player - 1) % n:
-            self.last_clued_any_clue = player
-        # Update the clue value given to me
-        if self.im_clued and self.is_between(player, self.given_clues[0]['first'], self.given_clues[0]['last']):
-            x = self.external_action_to_number(action)
-            if self.number_to_action(x)[0] == 'hint' and not (player == self.given_clues[0]['first'] and MODIFIEDACTION):
-                # the player was instructed to discard, but decided to hint instead
-                x = self.action_to_number(self.given_clues[0]['discards'][player])
-            self.given_clues[0]['value'] = (self.given_clues[0]['value'] - x) % 9
+                self.player_to_card.pop(player)
+                # todo: update information so that we can try to recover.
+        #### If I didn't predict it, update progress if it is a play
+        # elif action[0] == 'play' and not misplay:
+        #     # print("update progress to",cardname)
+        #     self.futureprogress[cardname[1]] += 1
+        #     assert self.futureprogress[cardname[1]] == int(cardname[0])
+
+
+        # if self.given_clues and not (action[0] == 'play' and player in self.player_to_card):
+        #     print(me,"thinks this was action",self.real_action_value(action, cardname, player),"- unmodified:",self.action_to_number(action))
+        #     self.given_clues[0]['value'] -= self.real_action_value(action, cardname, player)
+        #     self.given_clues[0]['value'] = self.given_clues[0]['value'] % 9
+        # else:
+        #     print(me,"predicted this action")
+        #     assert self.player_to_card[player] == action[1]
+        # if action[0] == 'play':
+        #     if player in self.player_to_card:
+        #         self.player_to_card.pop(player)
+        #         self.card_to_player.pop(cardname)
+        #     elif not misplay:
+        #         self.futureprogress[cardname[1]] += 1
+        #         assert self.futureprogress[cardname[1]] == int(cardname[0])
+        for d in self.given_clues[1:]:
+            d['plays'].append((action, cardname))
         if action[0] != 'hint':
             return
-        target, value = action[1]
-        firstclued = (self.last_clued_any_clue + 1) % n
-        self.last_clued_any_clue = lastclued = (player - 1) % n
-        players_between = self.list_between(firstclued,lastclued,r)
-
-        standard_discards = {i:self.standard_nonplay(r.h[i].cards, i, r.progress, r) for i in players_between if i != me}
+        target, value = rawaction[1]
         cluevalue = self.clue_to_number(target, value, player, r)
-        info = {'first':firstclued, 'last':lastclued, 'value':cluevalue, 'discards':standard_discards, 'cluer':player}
-        if self.im_clued:
-            self.given_clues.append(info)
-            return
-        assert (not self.given_clues) or self.is_between(me, self.given_clues[0]['first'], self.last_clued_any_clue)
-        self.im_clued = True
-        self.given_clues = [info]
+        #standard_discards = {i:self.standard_nonplay(r.h[i].cards, i, r.progress, r) for i in range(n) if i != me and i != player} # fixme
+        info = {'value':cluevalue, 'cluer':player, 'plays':[]}
+        self.given_clues.append(info)
+        if len(self.given_clues) == 1:
+            self.initialize_given_clue(player, me, r)
+
+    # def interpret_action(self, me, player, r):
+    #     """ self (players[me]) interprets the action of `player`,
+    #     which was the last action in the game.
+    #     This function accesses only information known to `me`."""
+    #     assert self == r.PlayerRecord[me]
+    #     n = r.nPlayers
+    #     rawaction = r.playHistory[-1]
+    #     action, cardname = self.interpret_external_action(rawaction)
+    #     # Update my clues
+    #     if self.given_clues:
+    #         if (action[0] == 'hint' and not (player == self.given_clues[0]['first'] and MODIFIEDACTION)) or\
+    #             action[0] == 'play' and not is_cardname_playable(cardname, self.futureprogress):
+    #             # the player was instructed to discard, but decided to hint instead, or was instructed by a later clue to play
+    #             x = self.given_clues[0]['discards'][player]
+    #         self.given_clues[0]['value'] = (self.given_clues[0]['value'] - self.action_to_number(x)) % 9
+    #     for d in self.given_clues[1:]:
+    #         d['plays'].append((action, cardname))
+    #     if action[0] != 'hint':
+    #         return
+    #     target, value = rawaction[1]
+    #     if self.given_clues:
+    #         firstplayer = -1
+    #     else:
+    #         firstplayer = 0 #todo
+    #     cluevalue = self.clue_to_number(target, value, player, r)
+    #     standard_discards = {i:self.standard_nonplay(r.h[i].cards, i, r.progress, r) for i in range(n) if i != me and i != player}
+    #     info = {'first':firstplayer, value':cluevalue, 'discards':standard_discards, 'cluer':player, 'plays':[]}
+    #     self.given_clues.append(info)
+    #     self.im_clued = True
 
     def standard_nonplay(self, cards, player, progress, r):
         """The standard action if you don't play"""
@@ -102,7 +302,21 @@ class HatPlayer(AIPlayer):
         # Do I want to discard?
         return self.easy_discards(cards, progress, r)
 
-    def standard_action(self, cluer, player, dont_play, progress, dic, r):
+    def want_to_play(self, cluer, player, dont_play, progress, dic, cardname, r):
+        """Do I want to play cardname in standard_action?"""
+        if not is_cardname_playable(cardname, progress):
+            return False
+        if cardname in dont_play:
+            return False
+        if is_cardname_playable(cardname, r.progress):
+            return True
+        # test whether the card in to make `cardname` playable is played on time
+        if prev_cardname(cardname) in dic:
+            return self.is_between(dic[prev_cardname(cardname)], cluer, player)
+        else:
+            print("The card",cardname,"will not become playable")
+
+    def standard_action(self, cluer, player, dont_play, progress, card_to_player, player_to_card, r):
         """Returns which action should be taken by `player`. Uses the internal encoding of actions:
         'play', n means play slot n (note: slot n, or r.h[player].cards[n] counts from oldest to newest, so slot 0 is oldest)
         'discard', n means discard slot n
@@ -111,14 +325,18 @@ class HatPlayer(AIPlayer):
         `player` is the player doing the standard_action
         `dont_play` is the list of cards played by other players
         `progress` is the progress if all clued cards before the current clue would have been played
-        `dic` is a dictionary. For all (names of) clued cards before the current clue, dic tells the player that will play them
+        `card_to_player` is a dictionary. For all (names of) clued cards before the current clue, card_to_player tells the player that will play them
+        `player_to_card` is the inverse dictionary
         """
         # this is never called on a player's own hand
         assert self != r.PlayerRecord[player]
+        # if the player is already playing, don't change the clue
+        if player in player_to_card:
+            return "play", player_to_card[player]
         cards = r.h[player].cards
         # Do I want to play?
-        playableCards = [card for card in get_plays(cards, progress)
-                if card['name'] not in dont_play]
+        playableCards = [card for card in cards
+            if self.want_to_play(cluer, player, dont_play, progress, card_to_player, card['name'], r)]
         if playableCards:
             playableCards.reverse()
             wanttoplay = find_lowest(playableCards)
@@ -126,7 +344,7 @@ class HatPlayer(AIPlayer):
         # I cannot play
         return self.standard_nonplay(cards, player, progress, r)
 
-    def modified_action(self, cluer, player, dont_play, progress, dic, r):
+    def modified_action(self, cluer, player, dont_play, progress, card_to_player, player_to_card, r):
         """Modified play for the first player the cluegiver clues. This play can
         be smarter than standard_action"""
         # note: in this command: self.futuredecksize and self.futureprogress and self.futureplays and self.futurediscards only counts the turns before `player`
@@ -137,7 +355,7 @@ class HatPlayer(AIPlayer):
         assert self != r.PlayerRecord[player]
         assert self == r.PlayerRecord[cluer]
         cards = r.h[player].cards
-        x = self.standard_action(cluer, player, dont_play, progress, dic, r)
+        x = self.standard_action(cluer, player, dont_play, progress, card_to_player, player_to_card, r)
         if not MODIFIEDACTION:
             return x
         # If you were instructed to play, and you can play a 5 which will help
@@ -152,8 +370,8 @@ class HatPlayer(AIPlayer):
                     return 'play', cards.index(playablefives[0])
             return x
         # If you are at 8 hints, hint
-        if self.modified_hints >= 8:
-            return 'hint', 0
+        # if self.modified_hints >= 8: # todo
+        #     return 'hint', 0
         # If we are not in the endgame yet and you can discard, just do it
         if x[0] == 'discard' and self.futuredecksize >= count_unplayed_playable_cards(r, self.futureprogress):
             return x
@@ -168,9 +386,9 @@ class HatPlayer(AIPlayer):
         ((not self.cards_played) and (not self.futureplays) and (not self.cards_discarded) and (not self.futurediscards)) or\
         ((not self.cards_played) and (not self.futureplays) and self.futuredecksize >= count_unplayed_playable_cards(r, self.futureprogress)):
             if self.futurehints <= 1 and r.verbose:
-                print("keeping a clue for the next cluer, otherwise they would be at",self.futurehints - 1, "( now at", r.hints,")")
+                print("keeping a clue for the next cluer, otherwise they would be at", self.futurehints - 1, "( now at", r.hints, ")")
             if self.min_futurehints <= 0 and r.verbose:
-                print("discarding to make sure everyone can clue, otherwise they would be at", self.min_futurehints - 1, "( now at", r.hints,")")
+                print("discarding to make sure everyone can clue, otherwise they would be at", self.min_futurehints - 1, "( now at", r.hints, ")")
             y = self.easy_discards(cards, progress, r)
             if y[0] == 'discard':
                 if r.verbose:
@@ -208,8 +426,7 @@ class HatPlayer(AIPlayer):
         if discardCards: # discard a card which will be played by this clue
             return 'discard', cards.index(discardCards[0])
         # discard a card which is not yet in the discard pile, and will not be discarded between the cluer and the player
-        discardCards = get_nonvisible_cards(cards, \
-                                        r.discardpile + self.futurediscarded)
+        discardCards = get_nonvisible_cards(cards, r.discardpile) # + self.futurediscarded # old
         discardCards = [card for card in discardCards if card['name'][0] != '5']
         assert all(map(lambda x: x['name'][0] != '1', discardCards))
         if discardCards: # discard a card which is not unsafe to discard
@@ -229,7 +446,7 @@ class HatPlayer(AIPlayer):
         """Returns the list of players from begin to end (inclusive)."""
         if begin <= end:
             return list(range(begin, end+1))
-        return list(range(begin,r.nPlayers)) + list(range(end+1))
+        return list(range(begin, r.nPlayers)) + list(range(end+1))
 
     def number_to_action(self, n):
         """Returns action corresponding to a number.
@@ -245,11 +462,14 @@ class HatPlayer(AIPlayer):
             return 'play', 4 - n
         return 'discard', 8 - n
 
-    def external_action_to_number(self, action):
-        """Returns number corresponding to an action in the log. """
+    def interpret_external_action(self, action):
+        """Interprets an action in the log. Returns a triple action, cardname, misplay.
+        action is the action in the internal format for this bot
+        cardname is the name of the played or discarded card (otherwise '')
+        misplay is true if the card was just misplayed"""
         if action[0] == 'hint':
-            return 0
-        return 3 - action[1]['position'] + (1 if action[0] == 'play' else 5)
+            return ('hint', 0), "", False
+        return (action[0], action[1]['position']), action[1]['name'], action[1]['misplayed']
 
     def action_to_number(self, action):
         """Returns number corresponding to an action as represented in this bot
@@ -315,17 +535,18 @@ class HatPlayer(AIPlayer):
         of that card in the hand"""
         me = r.whoseTurn
         cards = r.h[me].cards
+        # I'm not clued anymore if I don't play
         if myaction[0] == 'discard' and r.hints == 8:
             # todo: change the game code so that it rejects this
             print("Cheating! Discarding with 8 available hints")
-            print("Debug info: me:",me, "given clue: ",self.given_clues[0])
+            print("Debug info: me:", me, "given clue: ", self.given_clues[0])
         if myaction[0] == 'discard' and 0 < len(r.deck) < \
             count_unplayed_playable_cards(r, r.progress) and r.verbose:
             print("Discarding in endgame")
         if myaction[0] == 'play' and r.hints == 8 and \
             cards[myaction[1]]['name'][0] == '5' and r.log:
             print("Wasting a clue")
-        self.reset_memory()
+        if myaction[0] != 'play': self.given_clues = []
         if myaction[0] == 'hint':
             return myaction
         else:
@@ -335,12 +556,12 @@ class HatPlayer(AIPlayer):
         """Do this at the beginning of predicting future actions.
         Penalty is 1 if you're currently cluing, meaning that there is one
         fewer hint token after your turn"""
-        self.futureprogress = copy(r.progress)
+        # self.futureprogress = copy(r.progress)
         self.futuredecksize = len(r.deck)
         self.futurehints = r.hints - penalty
         self.futureplays = 0
         self.futurediscards = 0
-        self.futurediscarded = []
+        # self.futurediscarded = []
 
     def initialize_future_clue(self, r):
         """When predicting future actions, do this at the beginning of
@@ -367,7 +588,7 @@ class HatPlayer(AIPlayer):
             else:
                 self.cards_discarded += 1
                 self.hint_changes.append(2)
-                self.futurediscarded.append(r.h[i].cards[action[1]]['name'])
+                #self.futurediscarded.append(r.h[i].cards[action[1]]['name'])
         else:
             self.hint_changes.append(-1)
 
@@ -376,8 +597,8 @@ class HatPlayer(AIPlayer):
         every clue."""
         self.futureplays += self.cards_played
         self.futurediscards += self.cards_discarded
-        for p in self.will_be_played:
-            self.futureprogress[p[1]] += 1
+        # for p in self.will_be_played:
+        #     self.futureprogress[p[1]] += 1
         self.futuredecksize = max(0, self.futuredecksize - self.cards_played - self.cards_discarded)
         self.count_hints(r)
 
@@ -405,54 +626,47 @@ class HatPlayer(AIPlayer):
     def play(self, r):
         me = r.whoseTurn
         n = r.nPlayers
-        progress = r.progress
         # Some first turn initialization
-        if len(r.playHistory) < n:
+        if r.turnNumber < n:
             for p in r.PlayerRecord:
                 if p.__class__.__name__ != 'HatPlayer':
                     raise NameError('Hat AI must only play with other hatters')
-        if len(r.playHistory) == 0:
+        if r.turnNumber == 0:
             if r.nPlayers <= 3:
                 raise NameError('This AI works only with at least 4 players.')
             for i in range(n):
                 # initialize variables which contain the memory of this player.
                 # These are updated after every move of any player
-                r.PlayerRecord[i].reset_memory()
-                # the last player clued by any clue, not necessarily the clue
-                # which is relevant to me. This must be up to date all the time
-                r.PlayerRecord[i].last_clued_any_clue = n - 1
-                # do I have a card which can be safely discarded?
-                r.PlayerRecord[i].safe_discard = None
-        # everyone takes some time to think about the meaning of previously
-        # given clues
-        for i in range(n):
-            r.PlayerRecord[i].think_at_turn_start(i, r)
+                r.PlayerRecord[i].reset_memory(r)
+        else:
+            # everyone takes some time to think about the meaning of previously
+            # given clues
+            for i in range(n):
+                r.PlayerRecord[i].think_at_turn_start(i, r)
         # Is there a clue aimed at me?
-        if self.im_clued:
-            myaction = self.number_to_action(self.given_clues[0]['value'])
+        myaction = 'hint', 0
+        if self.given_clues:
+            myaction = self.resolve_given_clues(me, r)
             if myaction[0] == 'play':
                 return self.execute_action(myaction, r)
             if myaction[0] == 'discard':
+                # todo: decide if I want to hint instead
+                return self.execute_action(myaction, r)
                 #discard in endgame or if I'm the first to receive the clue
-                if r.hints == 0 or (self.given_clues[0]['first'] == me and MODIFIEDACTION):
-                    if r.hints != 8:
-                        return self.execute_action(myaction, r)
-                    elif r.verbose:
-                        print("I have to hint at 8 clues, this will screw up the next player's action.")
-                #todo: also discard when you steal the last clue from someone who has to clue
-                #clue if I can get tempo on a unclued card or if at 8 hints
-                if r.hints != 8 and not(all(map(lambda a:a[0] == 'play', self.next_player_actions)) and\
-                get_plays(r.h[(self.last_clued_any_clue + 1) % n].cards, progress)): #todo: this must be checked after current clued cards are played
-                    #if not in endgame, or with at most 1 clue, discard
-                    if len(r.deck) >= count_unplayed_playable_cards(r, r.progress):
-                        return self.execute_action(myaction, r)
-                    if r.hints <= 1:
-                        return self.execute_action(myaction, r)
-                self.safe_discard = r.h[me].cards[myaction[1]]
-            if myaction[0] != 'hint' and r.log:
-                print ("clue instead of discard")
-        else:
-            assert self.last_clued_any_clue == (me - 1) % n
+                # if r.hints == 0 or (self.modified_player == me and MODIFIEDACTION):
+                #     if r.hints != 8:
+                #         return self.execute_action(myaction, r)
+                #     elif r.verbose:
+                #         print("I have to hint at 8 clues, this will screw up the next player's action.")
+                # #todo: also discard when you steal the last clue from someone who has to clue
+                # #clue if I can get tempo on a unclued card or if at 8 hints
+                # if r.hints != 8 and not(all(map(lambda a:a[0] == 'play', self.next_player_actions)) and\
+                # get_plays(r.h[(self.last_clued_any_clue + 1) % n].cards, progress)): #todo: this must be checked after current clued cards are played
+                #     #if not in endgame, or with at most 1 clue, discard
+                #     if len(r.deck) >= count_unplayed_playable_cards(r, r.progress):
+                #         return self.execute_action(myaction, r)
+                #     if r.hints <= 1:
+                #         return self.execute_action(myaction, r)
         if not r.hints: # I cannot hint without clues
             if r.verbose:
                 print("Cannot clue, because there are no available hints")
@@ -463,59 +677,81 @@ class HatPlayer(AIPlayer):
                     print("I can discard slot", x, "which I know is trash")
             #todo: maybe discard the card so that the next player does something non-terrible
             return self.execute_action(('discard', x), r)
-            # a problem in one game was: cluer thinks that a player between them and first_clued is going to discard, which is their standard_play.
-            # They decide to clue instead. This causes the number of hints to be 2 smaller than expected, causing the first_clued to be instructed to hint with 0 clues
-        # I'm going to hint
-        # Before I clue I have to figure out what will happen after my turn
-        # because of clues given earlier.
-        # The first step is to predict what will happen because of the clue
-        # given to me.
-        if self.last_clued_any_clue == (me - 1) % n:
-            self.last_clued_any_clue = me
+        # I'm am considering whether to give a clue
+        # I have already executed resolve_next_player_actions, but now I probably need more details about number of clues left and so on
+        # print("I'm going to clue with progress",self.futureprogress,"dics:",self.player_to_card,self.card_to_player)
+        # if self.last_clued_any_clue == (me - 1) % n:
+        #     self.last_clued_any_clue = me
+        # self.initialize_future_prediction(1, r)
+        # if self.given_clues:
+        #     self.initialize_future_clue(r)
+        #     i = self.given_clues[0]['last']
+        #     for x in self.next_player_actions:
+        #         self.finalize_future_action(x, i, me, r)
+        #         i = (i - 1) % n
+        #     self.finalize_future_clue(r)
 
-
-
-        self.initialize_future_prediction(1, r)
-        if self.given_clues:
-            self.initialize_future_clue(r)
-            i = self.given_clues[0]['last']
-            for x in self.next_player_actions:
-                self.finalize_future_action(x, i, me, r)
-                i = (i - 1) % n
-            self.finalize_future_clue(r)
-
-        # What will happen because of clues given after that?
-        for d in self.given_clues[1:]:
-            self.initialize_future_clue(r)
-            i = d['last']
-            while i != d['first']:
-                x = self.standard_action(me, i, self.will_be_played, self.futureprogress, {}, r)
-                self.finalize_future_action(x, i, me, r)
-                d['value'] = (d['value'] - self.action_to_number(x)) % 9
-                i = (i - 1) % n
-            self.finalize_future_action(self.number_to_action(d['value']), i, me, r)
-            self.finalize_future_clue(r)
+        # # What will happen because of clues given after that?
+        # for d in self.given_clues[1:]:
+        #     self.initialize_future_clue(r)
+        #     i = d['last']
+        #     while i != d['first']: # change
+        #         x = self.standard_action(me, i, self.will_be_played, self.futureprogress, {}, {}, r)
+        #         self.finalize_future_action(x, i, me, r)
+        #         d['value'] = (d['value'] - self.action_to_number(x)) % 9
+        #         i = (i - 1) % n
+        #     self.finalize_future_action(self.number_to_action(d['value']), i, me, r)
+        #     self.finalize_future_clue(r)
 
         # Now I should determine what I'm going to clue
-        self.modified_hints = self.futurehints # the number of hints at the turn of the player executing modified_action
-        cluenumber = 0
-        self.initialize_future_clue(r)
+        # self.modified_hints = self.futurehints # the number of hints at the turn of the player executing modified_action
+        # cluenumber = 0
+        # self.initialize_future_clue(r)
 
-        i = (me - 1) % n
-        # What should all players - except the first - do?
-        while i != (self.last_clued_any_clue + 1) % n:
-            x = self.standard_action(me, i, self.will_be_played, self.futureprogress, {}, r)
-            cluenumber = (cluenumber + self.action_to_number(x)) % 9
-            self.finalize_future_action(x, i, me, r)
-            i = (i - 1) % n
+        # We first compute the value of all plays other than that of modified_player
+        value = self.initialize_given_clue(me, me, r)
+
+        # i = next(me, r)
+        # while i in self.player_to_card:
+        #     i = next(i, r)
+        # self.modified_player = i
+
+        # self.next_player_actions = []
+        # self.will_be_played = []
+        # i = prev(me, r)
+        # cluenumber = 0
+        # while i != me and i != self.modified_player:
+        #     x = self.standard_action(me, i, self.will_be_played, self.futureprogress, self.card_to_player, self.player_to_card, r)
+        #     self.next_player_actions.append(x)
+        #     cluenumber = (cluenumber + self.action_to_number(x)) % 9
+        #     if x[0] == 'play':
+        #         self.will_be_played.append(r.h[i].cards[x[1]]['name'])
+        #     # self.finalize_future_action(x, i, me, r)
+        #     i = prev(i, r)
+
+
+
+        # i = (me - 1) % n
+        # # What should all players - except the first - do?
+        # while i != (self.last_clued_any_clue + 1) % n:
+        #     x = self.standard_action(me, i, self.will_be_played, self.futureprogress, {}, {}, r)
+        #     cluenumber = (cluenumber + self.action_to_number(x)) % 9
+        #     self.finalize_future_action(x, i, me, r)
+        #     i = (i - 1) % n
         # What should the first player that I'm cluing do?
-        self.count_hints(r)
-        assert i != me
-        x = self.modified_action(me, i, self.will_be_played, self.futureprogress, {}, r)
-        cluenumber = (cluenumber + self.action_to_number(x)) % 9
-        clue = self.number_to_clue(cluenumber, me, r)
+        #self.count_hints(r)
+
+        x = self.standard_action(me, self.modified_player, self.will_be_played, self.futureprogress, self.card_to_player, self.player_to_card, r)
+        # print("modified action for player",self.modified_player,"is",x)
+        # todo: do stuff to find best modified_action
+#        x = self.modified_action(me, self.modified_player, self.will_be_played, self.futureprogress, self.card_to_player, self.player_to_card, r)
+        self.actions_before_modified.append(x)
+        self.next_player_actions = self.actions_before_modified + self.next_player_actions
+        self.resolve_next_player_actions(me, r)
+        # print("Now future progress is",self.futureprogress)
+        value = (value + self.action_to_number(x)) % 9
+        clue = self.number_to_clue(value, me, r)
         myaction = 'hint', clue
         # todo: at this point decide to discard if your clue is bad and you have a safe discard
-        # or discard if you see that there is already a problem *before* the turn of first_clued
-        self.last_clued_any_clue = (me - 1) % n
+        # if discarding, don't forget to reset some variables
         return self.execute_action(myaction, r)

@@ -226,6 +226,7 @@ class Round(object):
                     if value == '5':
                         self.hints = min(self.hints + 1, N_HINTS)
                 else: # Illegal play
+                    card['misplayed'] = True
                     self.lightning += 1
                     desc += ' (DOH!)'
 
@@ -250,6 +251,7 @@ class Round(object):
           known (bool): whether card can be deduced solely from public info
           cardNo (int): unique number of the card
           position (int): the position from which the card was played or discarded (0-4). Equals -1 if still in hand
+          misplayed (bool): set to true if this card was misplayed
         seat (int): Player ID number (starting player is 0).
         """
 
@@ -273,7 +275,8 @@ class Round(object):
                                 'known'    : False,
                                 'sec_name' : newCard,
                                 'cardNo'   : cardNo,
-                                'position' : -1 })
+                                'position' : -1,
+                                'misplayed': False })
 
         def drop(self, card):
             """Discard a card from the hand."""
