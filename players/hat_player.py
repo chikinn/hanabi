@@ -3,7 +3,7 @@
 A strategy for 4 or 5 players which uses "hat guessing" to convey information
 to all other players with a single clue. See doc_hat_player.md for a detailed
 description of the strategy. The following table gives the approximate
-percentages of this strategy reaching maximum score.
+ percentages of this strategy reaching maximum score.
 Players | % (6 suits) | % (5 suits)
 --------+-------------+------------
    4    |     80      |    84.5
@@ -222,37 +222,47 @@ class HatPlayer(AIPlayer):
         return list(range(begin,r.nPlayers)) + list(range(end+1))
 
     def number_to_action(self, n):
-        """Returns action corresponding to a number."""
+        """Returns action corresponding to a number.
+        0 means give any clue
+        1 means play newest (which is slot -1(!))
+        2 means play 2nd newest, etc.
+        5 means discard newest
+        6 means discard 2nd newest etc.
+        """
         if n == 0:
             return 'hint', 0
         elif n <= 4:
-            return 'play', n - 1
-        return 'discard', n - 5
+            return 'play', 4 - n
+        return 'discard', 8 - n
 
     def external_action_to_number(self, action):
         """Returns number corresponding to an action in the log. """
         if action[0] == 'hint':
             return 0
-        return action[1]['position'] + (1 if action[0] == 'play' else 5)
+        return 3 - action[1]['position'] + (1 if action[0] == 'play' else 5)
 
     def action_to_number(self, action):
         """Returns number corresponding to an action as represented in this bot
         (where the second component is the *position* of the card played/discarded). """
         if action[0] == 'hint':
             return 0
-        return action[1] + (1 if action[0] == 'play' else 5)
+        return 4 - action[1] + (0 if action[0] == 'play' else 4)
 
     def clue_to_number(self, target, value, clueGiver, r):
-        """Returns number corresponding to a clue."""
+        """Returns number corresponding to a clue.
+        clue rank to newest card (slot -1) of next player means 0
+        clue color to newest card of next player means 1
+        clue anything that doesn't touch newest card to next player means 2
+        every skipped player adds 3
+        """
         cards = r.h[target].cards
-        if len(cards[0]['indirect']) > 0 and cards[0]['indirect'][-1] == value:
+        if len(cards[-1]['indirect']) > 0 and cards[-1]['indirect'][-1] == value:
             x = 2
         elif value in r.suits:
             x = 1
         else:
             x = 0
         nr = 3 * ((target - clueGiver - 1) % r.nPlayers) + x
-        #print("(",clueGiver," gives ",target,value,")->",nr)
         return nr
 
     def number_to_clue(self, cluenumber, me, r):
@@ -262,21 +272,21 @@ class HatPlayer(AIPlayer):
         cards = r.h[target].cards
         x = cluenumber % 3
         clue = ''
-        if x == 0: clue = cards[0]['name'][0]
+        if x == 0: clue = cards[-1]['name'][0]
         if x == 1:
-            if cards[0]['name'][1] != RAINBOW_SUIT:
-                clue = cards[0]['name'][1]
+            if cards[-1]['name'][1] != RAINBOW_SUIT:
+                clue = cards[-1]['name'][1]
             else:
                 clue = VANILLA_SUITS[2]
         if x == 2:
             for i in range(1,len(cards)):
-                if cards[i]['name'][0] != cards[0]['name'][0]:
+                if cards[i]['name'][0] != cards[-1]['name'][0]:
                     clue = cards[i]['name'][0]
                     break
-                if cards[i]['name'][1] != cards[0]['name'][1] and cards[0]['name'][1] != RAINBOW_SUIT:
+                if cards[i]['name'][1] != cards[-1]['name'][1] and cards[-1]['name'][1] != RAINBOW_SUIT:
                     if cards[i]['name'][1] != RAINBOW_SUIT:
                         clue = cards[i]['name'][1]
-                    elif cards[0]['name'][1] != VANILLA_SUITS[0]:
+                    elif cards[-1]['name'][1] != VANILLA_SUITS[0]:
                         clue = VANILLA_SUITS[0]
                     else:
                         clue = VANILLA_SUITS[1]
@@ -284,8 +294,7 @@ class HatPlayer(AIPlayer):
         if clue == '':
             if r.verbose:
                 print("Cannot give a clue which doesn't touch the newest card in the hand of player ", target)
-            clue = cards[0]['name'][0]
-        #print(cluenumber,"(",x,")->",target,clue)
+            clue = cards[-1]['name'][0]
         return (target, clue)
 
     def execute_action(self, myaction, r):
