@@ -12,7 +12,7 @@ Command-line arguments (see usage):
   loss_score: Whether to award points after a game is lost
 """
 
-import sys, argparse, logging, random
+import sys, argparse, logging, random, os
 from time import gmtime, strftime
 from math import sqrt
 from play_hanabi import play_one_round, player_end_game_logging
@@ -112,6 +112,8 @@ if args.verbosity == 'log':
 if args.seed >= 0:
     random.seed(args.seed)
 
+if args.output:
+  os.remove('log.json')
 # Play rounds.
 scores = []
 for i in range(args.n_rounds):
@@ -123,7 +125,6 @@ for i in range(args.n_rounds):
     if args.verbosity != 'silent':
         logger.info('Score: ' + str(score))
     player_end_game_logging(players)
-    args.output = False # we don't have to log multiple games
 
 # Print average scores.
 if args.verbosity != 'silent':

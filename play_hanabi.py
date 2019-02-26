@@ -61,8 +61,9 @@ def play_one_round(gameType, players, names, verbosity, lossScore, isPoliced,wri
         if gameType == 'purple': variant = "Six Suits"
         if gameType == 'vanilla': variant = "No Variant"
         output = { "actions": actions, "deck": startDeck, "notes": notes, "players": players, "variant": variant }
-        with io.open('log.json', 'w', encoding='utf-8') as f:
+        with io.open('log.json', 'a', encoding='utf-8') as f:
             f.write(json.dumps(output, ensure_ascii=False))
+            f.write('\n\n')
 
     if r.lightning == N_LIGHTNING and lossScore == 'zero':
         return 0 # Award no points for a loss
