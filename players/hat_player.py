@@ -422,7 +422,7 @@ class HatPlayer(AIPlayer):
                 # which is relevant to me. This must be up to date all the time
                 r.PlayerRecord[i].last_clued_any_clue = n - 1
                 # do I have a card which can be safely discarded?
-                r.PlayerRecord[i].safe_discad = -1
+                r.PlayerRecord[i].safe_discard = None
         # everyone takes some time to think about the meaning of previously
         # given clues
         for i in range(n):
@@ -438,7 +438,7 @@ class HatPlayer(AIPlayer):
                     if r.hints != 8:
                         return self.execute_action(myaction, r)
                     elif r.verbose:
-                        print("I have to hint at 8 clues, this will screw up the next players' action.")
+                        print("I have to hint at 8 clues, this will screw up the next player's action.")
                 #todo: also discard when you steal the last clue from someone who has to clue
                 #clue if I can get tempo on a unclued card or if at 8 hints
                 if r.hints != 8 and not(all(map(lambda a:a[0] == 'play', self.next_player_actions)) and\
@@ -448,6 +448,7 @@ class HatPlayer(AIPlayer):
                         return self.execute_action(myaction, r)
                     if r.hints <= 1:
                         return self.execute_action(myaction, r)
+                self.safe_discard = r.h[me].cards[myaction[1]]
             if myaction[0] != 'hint' and r.log:
                 print ("clue instead of discard")
         else:
@@ -455,8 +456,13 @@ class HatPlayer(AIPlayer):
         if not r.hints: # I cannot hint without clues
             if r.verbose:
                 print("Cannot clue, because there are no available hints")
-            #todo: discard the card so that the next player does something non-terrible
-            return self.execute_action(('discard', 3), r)
+            x = 3
+            if self.safe_discard is not None and self.safe_discard in r.h[me].cards:
+                x = r.h[me].cards.index(self.safe_discard)
+                if r.verbose:
+                    print("I can discard slot", x, "which I know is trash")
+            #todo: maybe discard the card so that the next player does something non-terrible
+            return self.execute_action(('discard', x), r)
             # a problem in one game was: cluer thinks that a player between them and first_clued is going to discard, which is their standard_play.
             # They decide to clue instead. This causes the number of hints to be 2 smaller than expected, causing the first_clued to be instructed to hint with 0 clues
         # I'm going to hint
