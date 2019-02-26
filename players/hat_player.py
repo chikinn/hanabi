@@ -15,8 +15,10 @@ from hanabi_classes import *
 from bot_utils import *
 from copy import copy
 
-# the cluer gives decides for the first clued player what to do. If false, the clued player can clue instead of discarding
-MODIFIEDPLAY = True
+# the cluer gives decides for the first clued player what to do.
+# If true, the cluer can tell the player to discard, including cards which might be useful later
+# If false, the clued player can clue instead of discarding
+MODIFIEDACTION = True
 
 class HatPlayer(AIPlayer):
 
@@ -72,7 +74,7 @@ class HatPlayer(AIPlayer):
         # Update the clue value given to me
         if self.im_clued and self.is_between(player, self.given_clues[0]['first'], self.given_clues[0]['last']):
             x = self.external_action_to_number(action)
-            if self.number_to_action(x)[0] == 'hint' and not (player == self.given_clues[0]['first'] and MODIFIEDPLAY):
+            if self.number_to_action(x)[0] == 'hint' and not (player == self.given_clues[0]['first'] and MODIFIEDACTION):
                 # the player was instructed to discard, but decided to hint instead
                 x = self.action_to_number(self.given_clues[0]['discards'][player])
             self.given_clues[0]['value'] = (self.given_clues[0]['value'] - x) % 9
@@ -135,7 +137,7 @@ class HatPlayer(AIPlayer):
         assert self == r.PlayerRecord[cluer]
         cards = r.h[player].cards
         x = self.standard_action(cluer, player, dont_play, progress, dic, r)
-        if not MODIFIEDPLAY:
+        if not MODIFIEDACTION:
             return x
         # If you were instructed to play, and you can play a 5 which will help
         # a future person to clue, do that.
@@ -148,20 +150,22 @@ class HatPlayer(AIPlayer):
                         print('play a 5 instead')
                     return 'play', cards.index(playablefives[0])
             return x
-
         # If you are at 8 hints, hint
         if self.modified_hints >= 8:
             return 'hint', 0
-        if x[0] == 'hint' and (not self.cards_played) and (not self.futureplays) and r.verbose:
+        # If we are not in the endgame yet and you can discard, just do it
+        if x[0] == 'discard' and self.futuredecksize >= count_unplayed_playable_cards(r, self.futureprogress):
+            return x
+        if (not self.cards_played) and (not self.futureplays) and r.verbose:
             print('nobody can play!')
 
-        # Sometimes you want to discard instead of hint. This happens if either
+        # Sometimes you want to discard. This happens if either
         # - someone is instructed to hint without clues
         # - everyone else will hint
         # - everyone else will hint or discard, and it is not the endgame
-        if x[0] == 'hint' and (self.min_futurehints <= 0 or\
+        if self.min_futurehints <= 0 or\
         ((not self.cards_played) and (not self.futureplays) and (not self.cards_discarded) and (not self.futurediscards)) or\
-        ((not self.cards_played) and (not self.futureplays) and self.futuredecksize >= count_unplayed_playable_cards(r, self.futureprogress))):
+        ((not self.cards_played) and (not self.futureplays) and self.futuredecksize >= count_unplayed_playable_cards(r, self.futureprogress)):
             y = self.easy_discards(cards, progress, r)
             if y[0] == 'discard':
                 if r.verbose:
@@ -170,11 +174,12 @@ class HatPlayer(AIPlayer):
             y = self.hard_discards(cards, dont_play, progress, r)
             if y[0] == 'discard':
                 if r.verbose:
-                    print('discard instead (ouch)')
+                    print('discard a useful card instead')
                 return y
             if r.verbose:
                 print('all cards are critical!', progress)
-        return x
+        # when we reach this point, we either have no easy discards or we are in the endgame, and there is no emergency, so we stall
+        return 'hint', 0
 
 
     def easy_discards(self, cards, progress, r):
@@ -192,7 +197,7 @@ class HatPlayer(AIPlayer):
         # Otherwise clue
         return 'hint', 0
 
-    def hard_discards(self, cards, dont_play, progress, r):
+    def hard_discards(self, cards, dont_play, progress, r): # todo: discard cards which are visible in other people's hands
         """Find the least bad card to discard"""
         discardCards = [card for card in cards if card['name'] in dont_play]
         if discardCards: # discard a card which will be played by this clue
@@ -432,7 +437,7 @@ class HatPlayer(AIPlayer):
                 return self.execute_action(myaction, r)
             if myaction[0] == 'discard':
                 #discard in endgame or if I'm the first to receive the clue
-                if r.hints == 0 or (self.given_clues[0]['first'] == me and MODIFIEDPLAY):
+                if r.hints == 0 or (self.given_clues[0]['first'] == me and MODIFIEDACTION):
                     return self.execute_action(myaction, r)
                 #todo: also discard when you steal the last clue from someone who has to clue
                 #clue if I can get tempo on a unclued card or if at 8 hints
@@ -459,6 +464,8 @@ class HatPlayer(AIPlayer):
         # given to me.
         if self.last_clued_any_clue == (me - 1) % n:
             self.last_clued_any_clue = me
+
+
         self.initialize_future_prediction(1, r)
         if self.given_clues:
             self.initialize_future_clue(r)
