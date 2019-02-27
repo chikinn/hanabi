@@ -3,13 +3,11 @@
 A strategy for 4 or 5 players which uses "hat guessing" to convey information
 to all other players with a single clue. See doc_hat_player.md for a detailed
 description of the strategy. The following table gives the approximate
-percentages of this strategy reaching maximum score.
-(over 10000 games, rounded to the nearest 0.5%).
-The standard error is 0.3-0.4pp, so it could maybe be a pp off.
-Players | % (5 suits) | % (6 suits)
---------+-------------+------------
-   4    |     90      |     88
-   5    |     87      |     92
+percentages of this strategy reaching maximum score (over 150000 games).
+Players | % (no variant) | % (rainbow)
+--------+----------------+------------
+   4    |      89.7      |   87.8
+   5    |      87.8      |   92.6
 """
 
 #todo:
