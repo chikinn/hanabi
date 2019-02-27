@@ -3,17 +3,12 @@
 A strategy for 4 or 5 players which uses "hat guessing" to convey information
 to all other players with a single clue. See doc_hat_player.md for a detailed
 description of the strategy. The following table gives the approximate
-percentages of this strategy reaching maximum score (over 150000 games).
+percentages of this strategy reaching maximum score (over 10000 games).
 Players | % (no variant) | % (rainbow)
 --------+----------------+------------
-   4    |      89.7      |   87.8
-   5    |      87.8      |   92.6
+   4    |      92.1      |   92.2
+   5    |      89.3      |   94.1
 """
-
-#todo:
-# modified_player is wrong
-# to get modified_player, we need to store player_to_card for all players, not just the ones after me
-# to get player_to_card for all players, we add a new variable player_to_card_current
 
 from hanabi_classes import *
 from bot_utils import *
@@ -74,7 +69,7 @@ class HatPlayer(AIPlayer):
         self.player_to_card = {}
 
         # do I have a card which can be safely discarded?
-        self.safe_discard = None
+        self.useless_card = None
         # stores the actions between the cluer and the modified_player. Only used when the player is deciding whether to clue
         self.actions_before_modified = []
 
@@ -124,7 +119,7 @@ class HatPlayer(AIPlayer):
         self.modified_player = i
         #print(me,"thinks",cluer,"->",self.modified_player,"-",self.player_to_card) # I think this works now, but maybe double check
         # find out expected discards:
-        self.expected_discards = {i:self.standard_nonplay(self.recover_hand(i, r), i, self.futureprogress, r) for i in range(r.nPlayers) if i != me and i != cluer}
+        self.expected_discards = {i:self.safe_discard(self.recover_hand(i, r), self.futureprogress, r) for i in range(r.nPlayers) if i != me and i != cluer}
         # find out what players after me and after modified_player will do
         self.next_player_actions = []
         self.will_be_played = []
@@ -196,7 +191,7 @@ class HatPlayer(AIPlayer):
                 if myaction[0] == 'play':
                     return myaction
                 if myaction[0] == 'discard':
-                    self.safe_discard = r.h[me].cards[myaction[1]]
+                    self.useless_card = r.h[me].cards[myaction[1]]
             self.finalize_given_clue(me, r)
             if len(self.given_clues) == 1 and me == r.whoseTurn:
                 return myaction
@@ -278,12 +273,6 @@ class HatPlayer(AIPlayer):
         if len(self.given_clues) == 1:
             self.initialize_given_clue(player, me, r)
 
-    def standard_nonplay(self, cards, player, progress, r):
-        """The standard action if you don't play"""
-        assert self != r.PlayerRecord[player]
-        # Do I want to discard?
-        return self.easy_discards(cards, progress, r)
-
     def want_to_play(self, cluer, player, dont_play, progress, dic, cardname, r):
         """Do I want to play cardname in standard_action?"""
         if not is_cardname_playable(cardname, progress):
@@ -295,7 +284,6 @@ class HatPlayer(AIPlayer):
         # test whether the card in to make `cardname` playable is played on time
         if prev_cardname(cardname) in dic:
             return self.is_between(dic[prev_cardname(cardname)], cluer, player)
-        # print("The card",cardname,"will not become playable")
         return False
 
     def standard_action(self, cluer, player, dont_play, progress, card_to_player, player_to_card, r):
@@ -324,20 +312,43 @@ class HatPlayer(AIPlayer):
             wanttoplay = find_lowest(playableCards)
             return 'play', cards.index(wanttoplay)
         # I cannot play
-        return self.standard_nonplay(cards, player, progress, r)
+        return self.safe_discard(cards, progress, r)
+
+    def safe_discard(self, cards, progress, r):
+        """Discard in the standard action"""
+        # Do I want to discard?
+        discardCards = get_played_cards(cards, progress)
+        if discardCards: # discard a card which is already played
+            return 'discard', cards.index(discardCards[0])
+        discardCards = get_duplicate_cards(cards)
+        if discardCards: # discard a card which occurs twice in your hand
+            return 'discard', cards.index(discardCards[0])
+        # Otherwise clue
+        return 'hint', 0
 
     def prepare_modified_action(self, r):
         """Set variables needed for modified_action"""
+        # the actions all other players are taken
         self.other_actions = self.actions_before_modified + self.next_player_actions
+        # the number of these actions that are plays
         self.futureplays = len([action for action in self.other_actions if action[0] == 'play'])
+        # the number of these actions that are discards
         self.futurediscards = len([action for action in self.other_actions if action[0] == 'discard'])
-        self.futuredecksize = len(r.deck) - self.futureplays - self.futurediscards
+        # Are we in the endgame now (same when looking at the turn of the modified player)?
         self.endgame = len(r.deck) < count_unplayed_playable_cards(r, r.progress)
+        # Number of hints during the modified player's turn
         self.modified_hints = r.hints - 1
+        # Dictionary sending cardnames to players who play it
+        self.modified_dic = {}
+        # The
+        self.modified_progress = r.progress.copy()
         i = next(r.whoseTurn, r)
-        for _, pos in self.actions_before_modified:
-            if r.h[i].cards[pos]['name'][0] == '5':
-                self.modified_hints += 1
+        for atype, pos in self.actions_before_modified:
+            assert atype == 'play'
+            name = r.h[i].cards[pos]['name']
+            if name[0] == '5': self.modified_hints += 1
+            self.modified_progress[name[1]] = int(name[0])
+            self.modified_dic[name] = i
             i = next(i, r)
         self.min_futurehints = self.modified_hints
         self.futurehints = self.modified_hints
@@ -349,17 +360,17 @@ class HatPlayer(AIPlayer):
                 self.min_futurehints = min(self.min_futurehints, self.futurehints)
             elif atype == 'discard':
                 self.futurehints += 1
-            elif r.h[i].cards[pos]['name'][0] == '5':
-                self.futurehints += 1
+            else:
+                name = r.h[i].cards[pos]['name']
+                if name[0] == '5': self.futurehints += 1
+                self.modified_progress[name[1]] = int(name[0])
+                self.modified_dic[name] = i
             i = next(i, r)
         #print("Now at",r.hints,"clues, modified has",self.modified_hints,"minimal",self.min_futurehints,"end",self.futurehints,self.endgame)
 
     def modified_action(self, cluer, player, dont_play, progress, card_to_player, player_to_card, r):
         """Modified play for the first player the cluegiver clues. This play can
         be smarter than standard_action"""
-        # note: in this command: self.futuredecksize and self.futureprogress and self.futureplays and self.futurediscards only counts the turns before `player`
-        # self.cards_played and self.cards_discarded only counts the cards drawn by the current clue (so after `player`)
-        # self.min_futurehints, self.futurehints and self.max_futurehints include all turns before and after `player`
 
         # this is never called on a player's own hand
         assert self != r.PlayerRecord[player]
@@ -379,72 +390,76 @@ class HatPlayer(AIPlayer):
                         print('play a 5 instead')
                     return 'play', cards.index(playablefives[0])
             return x
+
         # If you are at 8 hints, hint
         if self.modified_hints >= 8:
             return 'hint', 0
-        # Probably hint if everyone else is playing
-        if self.futureplays == 3 and self.modified_hints + len(self.actions_before_modified) >= 5:
+
+        # The modified player can look a bit harder for a safe discard
+        if x[0] == 'hint':
+            x = self.modified_safe_discard(cluer, player, cards, dont_play, r)
+
+        # If we are out of hints, you must discard
+        if self.min_futurehints <= 0 or self.futurehints <= 1:
+            return self.modified_discard(x, cards, progress, r)
+
+        # Probably hint if everyone else is playing and you can instruct two players to do something
+        if self.futureplays == r.nPlayers - 2 and self.actions_before_modified:
             return 'hint', 0
-        #todo: test if modified_player can get a new card to play
-        # If you can discard and we are not in the endgame yet or nobody can play, just discard
+
+        #Can you get a new card to play?
+        i = next(player, r)
+        for atype, _ in self.next_player_actions:
+            if atype != 'play' and [card for card in r.h[i].cards if self.want_to_play(cluer, i, [], self.modified_progress, self.modified_dic, card['name'], r)]:
+                return 'hint', 0
+            i = next(i, r)
+
+
+        # If you can safely discard and we are not in the endgame yet or nobody can play, just discard
         if x[0] == 'discard' and ((not self.endgame) or not self.futureplays):
             return x
 
         # Sometimes you want to discard. This happens if either
         # - someone is instructed to hint without clues
-        # - nobody can play, and few people can discardeveryone else will hint
+        # - few players can play or discard
         # - everyone else will hint or discard, and it is not the endgame
-        if self.min_futurehints <= 0 or self.futurehints <= 1 or\
-            (not self.futureplays and not self.endgame):
-            # if self.futurehints <= 1 and r.verbose:
-            #     print("keeping a clue for the next cluer, otherwise they would be at", self.futurehints - 1, "( now at", r.hints, ")")
-            # if self.min_futurehints <= 0 and r.verbose:
-            #     print("discarding to make sure everyone can clue, otherwise they would be at", self.min_futurehints - 1, "( now at", r.hints, ")")
-            y = self.easy_discards(cards, progress, r)
-            if y[0] == 'discard':
-                if r.verbose:
-                    print('discard instead')
-                return y
-            y = self.hard_discards(cards, dont_play, progress, r)
-            if y[0] == 'discard':
-                if r.verbose:
-                    print('discard a useful card instead')
-                return y
-            if r.verbose:
-                print('all cards are critical!', progress)
-        # when we reach this point, we either have no easy discards or we are in the endgame, and there is no emergency, so we stall
+        if self.futureplays <= 1 and not self.endgame:
+            return self.modified_discard(x, cards, progress, r)
+
+        # we are in the endgame, and there is no emergency, so we stall
         return 'hint', 0
 
-
-    def easy_discards(self, cards, progress, r):
-        """Find a card you want to discard"""
-        # Do I want to discard?
-        discardCards = get_played_cards(cards, progress)
-        if discardCards: # discard a card which is already played
-            return 'discard', cards.index(discardCards[0])
-        discardCards = get_duplicate_cards(cards)
-        if discardCards: # discard a card which occurs twice in your hand
-            return 'discard', cards.index(discardCards[0])
-        # discardCards = [card for card in cards if card['name'] in dont_play]
-        # if discardCards: # discard a card which will be played by this clue
-        #     return cards.index(discardCards[0]) + 4
-        # Otherwise clue
-        return 'hint', 0
-
-    def hard_discards(self, cards, dont_play, progress, r): # todo: discard cards which are visible in other people's hands
-        """Find the least bad card to discard"""
+    def modified_safe_discard(self, cluer, player, cards, dont_play, r):
+        """Discards which don't hurt for the modified player"""
+        # this code is only called when safe_discard returns 'hint'
+        # discard a card which will be played by this clue
         discardCards = [card for card in cards if card['name'] in dont_play]
-        if discardCards: # discard a card which will be played by this clue
+        if discardCards:
             return 'discard', cards.index(discardCards[0])
+        # discard a card visible in someone else's hand
+        visibleCards = [card['name'] for i in range(r.nPlayers) if i != cluer and i != player for card in r.h[i].cards]
+        discardCards = [card for card in cards if card['name'] in visibleCards]
+        if discardCards:
+            return 'discard', cards.index(discardCards[0])
+        return 'hint', 0
+
+    def modified_discard(self, action, cards, progress, r):
+        """Find the least bad non-critical card to discard"""
         # discard a card which is not yet in the discard pile, and will not be discarded between the cluer and the player
-        discardCards = get_nonvisible_cards(cards, r.discardpile) # + self.futurediscarded # old
+        if action[0] == 'discard': return action
+        discardCards = get_nonvisible_cards(cards, r.discardpile)
         discardCards = [card for card in discardCards if card['name'][0] != '5']
         assert all(map(lambda x: x['name'][0] != '1', discardCards))
-        if discardCards: # discard a card which is not unsafe to discard
+        if discardCards:
             discardCard = find_highest(discardCards)
             return 'discard', cards.index(discardCard)
         return 'hint', 0
 
+    def critical_discard(self, cards, r):
+        """Find the card with the highest rank card to discard, and weep"""
+        if r.verbose:
+            print("Instructing modified player to discard a critical card")
+        return find_highest(cards)
 
     def is_between(self, x, begin, end):
         """Returns whether x is (in turn order) between begin and end
@@ -609,8 +624,8 @@ class HatPlayer(AIPlayer):
                 print("Cannot clue, because there are no available hints")
             self.next_player_actions = []
             x = 3
-            if self.safe_discard is not None and self.safe_discard in r.h[me].cards:
-                x = r.h[me].cards.index(self.safe_discard)
+            if self.useless_card is not None and self.useless_card in r.h[me].cards:
+                x = r.h[me].cards.index(self.useless_card)
                 if r.verbose:
                     print("I can discard slot", x, "which I know is trash")
             #todo: maybe discard the card so that the next player does something non-terrible
