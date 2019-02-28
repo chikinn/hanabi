@@ -5,7 +5,7 @@ round can be played.  Low-level details, along with thorough documentation, are
 in another module (hanabi_classes).
 """
 
-import json, io
+import json, io, os
 from hanabi_classes import *
 
 def to_json (r, action):
@@ -47,7 +47,8 @@ def play_one_round(gameType, players, names, verbosity, lossScore, isPoliced,wri
 
         r.get_play(players[r.whoseTurn]) # Play one turn.
 
-    if writeOutput:
+    if writeOutput or 'stop' in stats:
+        if not writeOutput: os.remove('log.json')
         actions = list(map(lambda action: to_json(r, action), r.playHistory))
         handSize = 4
         if r.nPlayers < 4: handSize += 1

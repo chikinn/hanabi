@@ -113,12 +113,16 @@ if args.seed >= 0:
     random.seed(args.seed)
 
 stats = {} # a dictionary players can write into which will be printed in the end. Useful for collecting statistics
+# if you set r.stats['stop'] = 0, then the log of that game will be appended to log.json, and no new game will be started
 
 if args.output:
   os.remove('log.json')
 # Play rounds.
 scores = []
 for i in range(args.n_rounds):
+    if 'stop' in stats:
+        logger.info("Games interrupted by player after round " + str(i) + "!")
+        break
     if args.verbosity in ('verbose', 'log'):
         logger.info('\n' + 'ROUND {}:'.format(i))
     score = play_one_round(args.game_type, players, names, args.verbosity,
