@@ -18,7 +18,10 @@ from copy import copy
 # If true, the cluer can tell the player to discard, including cards which might be useful later
 # If false, the clued player can clue instead of discarding
 MODIFIEDACTION = True
-
+PRINTSTATS = True
+STATVALUES = ['play 5 instead', "someone cannot clue, but I'll play anyway", 'unsafe discard at 0 hints','safe discard at 0 hints',\
+    'clue blocked','I misplayed','instructed to discard at 8 clues',
+    'player did wrong action', 'wrong action: discard at 0 clues']
 
 def next(n, r):
     """The player after n."""
@@ -223,8 +226,8 @@ class HatPlayer(AIPlayer):
             d['plays'][player] = (action, card)
         if me == player:
             if action[0] != 'play': return
-            if card['misplayed'] and r.verbose:
-                print("I misplayed!",self.given_clues[0])
+            if card['misplayed'] and PRINTSTATS:
+                r.stats['I misplayed'] += 1
             self.player_to_card_current[player] = action[1], cardname
             self.resolve_given_clues(me, r)
             assert not self.given_clues
@@ -241,12 +244,14 @@ class HatPlayer(AIPlayer):
             self.given_clues[0]['value'] -= self.action_to_number(real_action)
             self.given_clues[0]['value'] = self.given_clues[0]['value'] % 9
         else:
-            if r.verbose:
+            if PRINTSTATS:
                 diff = (player - me - 1) % r.nPlayers
                 if diff < len(self.next_player_actions):
                     exp_action = self.next_player_actions[diff]
                     if not (exp_action == action or (exp_action[0] == 'discard' and action[0] == 'hint')):
-                        print("Player",me,"expected that player",player,"did",exp_action,"instead of",action,self.next_player_actions)
+                        r.stats['player did wrong action'] += 1
+                        if action[0] == 'discard' and r.hints == 1:
+                            r.stats['wrong action: discard at 0 clues'] += 1
 
             # If I predicted this play and I'm not currently clued, remove the prediction
             if player in self.player_to_card:
@@ -386,9 +391,18 @@ class HatPlayer(AIPlayer):
                 playablefives = [card for card in get_plays(cards, progress)
                         if card['name'][0] == '5']
                 if playablefives:
-                    if r.verbose:
-                        print('play a 5 instead')
+                    if PRINTSTATS:
+                        r.stats['play 5 instead'] += 1
                     return 'play', cards.index(playablefives[0])
+                else:
+                    if PRINTSTATS:
+                        r.stats["someone cannot clue, but I'll play anyway"] += 1
+                    if not self.endgame:
+                        action = self.safe_discard(cards, progress, r)
+                        if action[0] == 'discard': return action
+                        action = self.modified_safe_discard(cluer, player, cards, dont_play, r)
+                        action = self.modified_discard(action, cards, progress, r)
+                        if action[0] == 'discard': return action
             return x
 
         # If you are at 8 hints, hint
@@ -457,8 +471,6 @@ class HatPlayer(AIPlayer):
 
     def critical_discard(self, cards, r):
         """Find the card with the highest rank card to discard, and weep"""
-        if r.verbose:
-            print("Instructing modified player to discard a critical card")
         return find_highest(cards)
 
     def is_between(self, x, begin, end):
@@ -547,8 +559,7 @@ class HatPlayer(AIPlayer):
                         clue = VANILLA_SUITS[1]
                     break
         if clue == '':
-            if r.verbose:
-                print("Cannot give a clue which doesn't touch the newest card in the hand of player ", target)
+            if PRINTSTATS: r.stats['clue blocked'] += 1
             clue = cards[-1]['name'][0]
         return (target, clue)
 
@@ -586,6 +597,10 @@ class HatPlayer(AIPlayer):
         if r.turnNumber == 0:
             if r.nPlayers <= 3:
                 raise NameError('This AI works only with at least 4 players.')
+            if PRINTSTATS:
+                for s in STATVALUES:
+                    if s not in r.stats:
+                        r.stats[s] = 0
             for i in range(n):
                 # initialize variables which contain the memory of this player.
                 # These are updated after every move of any player
@@ -608,8 +623,8 @@ class HatPlayer(AIPlayer):
                 if r.hints == 0 or (self.modified_player == me and MODIFIEDACTION):
                     if r.hints != 8:
                         return self.execute_action(myaction, r)
-                    elif r.verbose:
-                        print("I have to hint at 8 clues as modified player, this will screw up the next player's action.")
+                    elif PRINTSTATS:
+                        r.stats['instructed to discard at 8 clues']
                 #todo: also discard when you steal the last clue from someone who has to clue
                 #clue if I can get tempo on a unclued card or if at 8 hints
                 if r.hints != 8 and not(all(map(lambda a:a[0] == 'play', self.next_player_actions)) and\
@@ -620,14 +635,12 @@ class HatPlayer(AIPlayer):
                     if r.hints <= 1: # todo: check if there will be a hint available because someone played a 5
                         return self.execute_action(myaction, r)
         if not r.hints: # I cannot hint without clues
-            if r.verbose:
-                print("Cannot clue, because there are no available hints")
             self.next_player_actions = []
             x = 3
             if self.useless_card is not None and self.useless_card in r.h[me].cards:
                 x = r.h[me].cards.index(self.useless_card)
-                if r.verbose:
-                    print("I can discard slot", x, "which I know is trash")
+                if PRINTSTATS: r.stats['safe discard at 0 hints'] += 1
+            elif PRINTSTATS: r.stats['unsafe discard at 0 hints'] += 1
             #todo: maybe discard the card so that the next player does something non-terrible
             return self.execute_action(('discard', x), r)
         # I'm am considering whether to give a clue

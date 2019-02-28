@@ -26,9 +26,9 @@ def to_json (r, action):
         dic = {"type":actionType, "target":target}
     return dic
 
-def play_one_round(gameType, players, names, verbosity, lossScore, isPoliced,writeOutput):
+def play_one_round(gameType, players, names, verbosity, lossScore, isPoliced,writeOutput, stats):
     """Play a full round and return the score (int)."""
-    r = Round(gameType, players, names, verbosity, isPoliced) # Instance of a single Hanabi round
+    r = Round(gameType, players, names, verbosity, isPoliced, stats) # Instance of a single Hanabi round
     r.generate_deck_and_deal_hands()
 
     while r.gameOverTimer != 0:

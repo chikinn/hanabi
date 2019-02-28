@@ -69,7 +69,7 @@ class Round(object):
     discardpile: list of (names of) cards which are discarded
     """
 
-    def __init__(self, gameType, players, names, verbosity, isPoliced):
+    def __init__(self, gameType, players, names, verbosity, isPoliced, stats):
         """Instantiate a Round and its Hand sub-objects."""
         self.gameType  = gameType
         self.suits = VANILLA_SUITS
@@ -96,6 +96,7 @@ class Round(object):
         self.log = (verbosity == 'log')
         self.zazz = ['[HANDS]', '[PLAYS]']
         self.isPoliced = isPoliced
+        self.stats = stats
 
         self.logger = logging.getLogger('game_log')
 

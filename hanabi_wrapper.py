@@ -112,6 +112,8 @@ if args.verbosity == 'log':
 if args.seed >= 0:
     random.seed(args.seed)
 
+stats = {} # a dictionary players can write into which will be printed in the end. Useful for collecting statistics
+
 if args.output:
   os.remove('log.json')
 # Play rounds.
@@ -120,7 +122,7 @@ for i in range(args.n_rounds):
     if args.verbosity in ('verbose', 'log'):
         logger.info('\n' + 'ROUND {}:'.format(i))
     score = play_one_round(args.game_type, players, names, args.verbosity,
-                           args.loss_score, args.police, args.output)
+                           args.loss_score, args.police, args.output, stats)
     scores.append(score)
     if args.verbosity != 'silent':
         logger.info('Score: ' + str(score))
@@ -143,3 +145,6 @@ if len(scores) > 1: # Only print stats if there were multiple rounds.
                 .format(100*perfect_games, 100*std_perfect_games))
 elif args.verbosity == 'silent': # Still print score for silent single round
     logger.info('Score: ' + str(scores[0]))
+
+stats = {k:v for k, v in stats.items() if v != 0}
+if stats: print(stats)
