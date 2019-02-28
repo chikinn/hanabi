@@ -10,6 +10,10 @@ Players | % (no variant) | % (rainbow)
    5    |      89.3      |   94.1
 """
 
+# ideas for improvement:
+# Add some endgame-specific knowledge: do not play if you cannot have playable cards. Try to play if deck == 0 and you don't see all playable cards
+# Decide to clue if you can give a useful clue
+
 from hanabi_classes import *
 from bot_utils import *
 from copy import copy
@@ -23,6 +27,13 @@ STATVALUES = ['play 5 instead', "someone cannot clue, but I'll play anyway", 'un
     'clue blocked','I misplayed','instructed to discard at 8 clues',
     'player did wrong action', 'wrong action: discard at 0 clues']
 
+def is_critical(cardname, r):
+    """Tests whether card is not played and there is no other non-discarded card with the same name
+    Does not check whether all copies of a lower rank are already discarded"""
+    if r.progress[cardname[1]] >= int(cardname[0]):
+        return False
+    return r.discardpile.count(cardname) + 1 == SUIT_CONTENTS.count(cardname[0])
+
 def next(n, r):
     """The player after n."""
     return (n + 1) % r.nPlayers
@@ -34,6 +45,16 @@ def prev(n, r):
 def prev_cardname(cardname):
     """The card with cardname below `cardname`. Doesn't check whether there is a card below"""
     return str(int(cardname[0]) - 1) + cardname[1]
+
+def find_all_lowest(l, f):
+    """Find all elements x in l where f(x) is minimal"""
+    minvalue = min([f(x) for x in l])
+    return [x for x in l if f(x) == minvalue]
+
+def find_all_highest(l, f):
+    """Find all elements x in l where f(x) is maximal"""
+    maxvalue = max([f(x) for x in l])
+    return [x for x in l if f(x) == maxvalue]
 
 class HatPlayer(AIPlayer):
 
@@ -314,7 +335,18 @@ class HatPlayer(AIPlayer):
             if self.want_to_play(cluer, player, dont_play, progress, card_to_player, card['name'], r)]
         if playableCards:
             playableCards.reverse()
+                    # play critical cards first if you have at least two of them in hand
+                    # playable_critical = [card for card in playableCards if is_critical(card['name'], r)]
+                    # if playable_critical and len([card for card in cards if is_critical(card['name'], r)]) >= 2:
+                    #     wanttoplay = playable_critical[0]
+                    # else:
+            # play lower ranking cards first
+            # playableCards = find_all_lowest(playableCards, lambda card: int(card['name'][0]))
+            # play critical cards first
+            # playableCards = find_all_lowest(playableCards, lambda card: int(is_critical(card['name'], r)))
+            # to do: prefer a card that lead into someone else's hand (especially if they don't play)
             wanttoplay = find_lowest(playableCards)
+            #wanttoplay = playableCards[0]
             return 'play', cards.index(wanttoplay)
         # I cannot play
         return self.safe_discard(cards, progress, r)
@@ -384,6 +416,7 @@ class HatPlayer(AIPlayer):
         x = self.standard_action(cluer, player, dont_play, progress, card_to_player, player_to_card, r)
         if not MODIFIEDACTION:
             return x
+
         # If you were instructed to play, and you can play a 5 which will help
         # a future person to clue, do that.
         if x[0] == 'play':
@@ -418,7 +451,7 @@ class HatPlayer(AIPlayer):
             return self.modified_discard(x, cards, progress, r)
 
         # Probably hint if everyone else is playing and you can instruct two players to do something
-        if self.futureplays == r.nPlayers - 2 and self.actions_before_modified:
+        if self.futureplays == r.nPlayers - 2 and self.actions_before_modified and self.futurehints >= 2:
             return 'hint', 0
 
         #Can you get a new card to play?
@@ -454,7 +487,8 @@ class HatPlayer(AIPlayer):
         visibleCards = [card['name'] for i in range(r.nPlayers) if i != cluer and i != player for card in r.h[i].cards]
         discardCards = [card for card in cards if card['name'] in visibleCards]
         if discardCards:
-            return 'discard', cards.index(discardCards[0])
+            discardCard = discardCards[0] # do we want to find the lowest or highest such card?
+            return 'discard', cards.index(discardCard)
         return 'hint', 0
 
     def modified_discard(self, action, cards, progress, r):
@@ -462,7 +496,7 @@ class HatPlayer(AIPlayer):
         # discard a card which is not yet in the discard pile, and will not be discarded between the cluer and the player
         if action[0] == 'discard': return action
         discardCards = get_nonvisible_cards(cards, r.discardpile)
-        discardCards = [card for card in discardCards if card['name'][0] != '5']
+        discardCards = [card for card in discardCards if card['name'][0] != '5' and not is_playable(card, progress)]
         assert all(map(lambda x: x['name'][0] != '1', discardCards))
         if discardCards:
             discardCard = find_highest(discardCards)
