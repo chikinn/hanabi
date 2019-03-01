@@ -112,21 +112,22 @@ if args.verbosity == 'log':
 if args.seed >= 0:
     random.seed(args.seed)
 
-stats = {} # a dictionary players can write into which will be printed in the end. Useful for collecting statistics
-# if you set r.stats['stop'] = 0, then the log of that game will be appended to log.json, and no new game will be started
+debug = {} # a dictionary players can write into which will be printed in the end. Useful for collecting statistics
+# if you set r.debug['stop'] = 0, then the log of that game will be appended to log.json, and no new game will be started
 
 if args.output:
   os.remove('log.json')
 # Play rounds.
 scores = []
 for i in range(args.n_rounds):
-    if 'stop' in stats:
+    if 'stop' in debug:
         logger.info("Games interrupted by player after round " + str(i) + "!")
+        args.n_rounds = i
         break
     if args.verbosity in ('verbose', 'log'):
         logger.info('\n' + 'ROUND {}:'.format(i))
     score = play_one_round(args.game_type, players, names, args.verbosity,
-                           args.loss_score, args.police, args.output, stats)
+                           args.loss_score, args.police, args.output, debug)
     scores.append(score)
     if args.verbosity != 'silent':
         logger.info('Score: ' + str(score))
@@ -150,5 +151,5 @@ if len(scores) > 1: # Only print stats if there were multiple rounds.
 elif args.verbosity == 'silent': # Still print score for silent single round
     logger.info('Score: ' + str(scores[0]))
 
-stats = {k:v for k, v in stats.items() if v != 0}
-if stats: print(stats)
+debug = {k:v for k, v in debug.items() if v != 0}
+if debug: print(debug)

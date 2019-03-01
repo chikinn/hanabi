@@ -11,6 +11,10 @@ Players | % (no variant) | % (rainbow)
 """
 
 # ideas for improvement:
+# make discarding when modified_player you can play dependent on whether the player at 0 clues has a safe discard (and is the last player to act)
+# tell about more useless cards:
+  # if you give a discard clue, give it to a card which is not yet marked as such before
+  # instead of repeating a play clue, tell about a discardable card
 # Add some endgame-specific knowledge: do not play if you cannot have playable cards. Try to play if deck == 0 and you don't see all playable cards
 # Decide to clue if you can give a useful clue
 
@@ -22,10 +26,10 @@ from copy import copy
 # If true, the cluer can tell the player to discard, including cards which might be useful later
 # If false, the clued player can clue instead of discarding
 MODIFIEDACTION = True
-PRINTSTATS = True
-STATVALUES = ['play 5 instead', "someone cannot clue, but I'll play anyway", 'unsafe discard at 0 hints','safe discard at 0 hints',\
-    'clue blocked','I misplayed','instructed to discard at 8 clues',
-    'player did wrong action', 'wrong action: discard at 0 clues', 'this is a bug']
+DEBUG = True
+DEBUGVALUES = ['play 5 instead', "someone cannot clue, but I have a play", 'unsafe discard at 0 hints','safe discard at 0 hints',\
+    'clue blocked','I misplayed','instructed to discard at 8 clues','instructing to discard critical card',
+    'player did wrong action at >0 clues', 'wrong action: discard at 0 clues', 'someone performed the wrong action']
 
 def is_critical(cardname, r):
     """Tests whether card is not played and there is no other non-discarded card with the same name
@@ -204,7 +208,8 @@ class HatPlayer(AIPlayer):
             # "and other players have done",value,"so remaining is",(self.given_clues[0]['value'] - value) % 9)
             self.given_clues[0]['value'] = (self.given_clues[0]['value'] - value) % 9
             if next(me, r) == r.whoseTurn and self.given_clues[0]['value'] != 0:
-                r.stats['this is a bug'] += 1
+                # this can happen if someone didn't perform the right action, or the cluer didn't give the correct clue
+                r.debug['someone performed the wrong action'] += 1
             return
         m_action = self.number_to_action((self.given_clues[0]['value'] - value) % 9)
         # print("Modified player",self.modified_player,"will",m_action)
@@ -235,8 +240,8 @@ class HatPlayer(AIPlayer):
 
     def clued_action(self, action, cardname, player):
         """The real action a player received, given his actual action"""
-        if (action[0] != 'play' and not (player == self.modified_player and MODIFIEDACTION)) or\
-            (action[0] == 'play' and self.cluedprogress[cardname[1]] + 1 < int(cardname[0])):
+        if player == self.modified_player and MODIFIEDACTION: return action
+        if action[0] != 'play' or self.cluedprogress[cardname[1]] + 1 < int(cardname[0]):
             # the player was instructed to discard, but decided to hint instead, or was instructed by a later clue to play
             if player in self.expected_discards:
                 return self.expected_discards[player]
@@ -257,8 +262,8 @@ class HatPlayer(AIPlayer):
             d['plays'][player] = (action, card)
         if me == player:
             if action[0] != 'play': return
-            if card['misplayed'] and PRINTSTATS:
-                r.stats['I misplayed'] += 1
+            if card['misplayed'] and DEBUG:
+                r.debug['I misplayed'] += 1
             self.player_to_card_current[player] = action[1], cardname
             self.resolve_given_clues(me, r)
             assert not self.given_clues
@@ -275,14 +280,17 @@ class HatPlayer(AIPlayer):
             self.given_clues[0]['value'] -= self.action_to_number(real_action)
             self.given_clues[0]['value'] = self.given_clues[0]['value'] % 9
         else:
-            if PRINTSTATS:
+            if DEBUG:
                 diff = (player - me - 1) % r.nPlayers
                 if diff < len(self.next_player_actions):
                     exp_action = self.next_player_actions[diff]
                     if not (exp_action == action or (exp_action[0] == 'discard' and action[0] == 'hint')):
-                        r.stats['player did wrong action'] += 1
                         if action[0] == 'discard' and r.hints == 1:
-                            r.stats['wrong action: discard at 0 clues'] += 1
+                            r.debug['wrong action: discard at 0 clues'] += 1
+                        else:
+                            r.debug['player did wrong action at >0 clues'] += 1
+                            # print(me, player, action, exp_action, self.next_player_actions, r.hints, r.turnNumber)
+                            # r.debug['stop'] = 0
 
             # If I predicted this play and I'm not currently clued, remove the prediction
             if player in self.player_to_card:
@@ -352,12 +360,12 @@ class HatPlayer(AIPlayer):
                     #     wanttoplay = playable_critical[0]
                     # else:
             # play lower ranking cards first
-            # playableCards = find_all_lowest(playableCards, lambda card: int(card['name'][0]))
+            playableCards = find_all_lowest(playableCards, lambda card: int(card['name'][0]))
             # play critical cards first
-            # playableCards = find_all_lowest(playableCards, lambda card: int(is_critical(card['name'], r)))
+            playableCards = find_all_highest(playableCards, lambda card: int(is_critical(card['name'], r)))
             # to do: prefer a card that lead into someone else's hand (especially if they don't play)
-            wanttoplay = find_lowest(playableCards)
-            #wanttoplay = playableCards[0]
+            # wanttoplay = find_lowest(playableCards)
+            wanttoplay = playableCards[0]
             return 'play', cards.index(wanttoplay)
         # I cannot play
         return self.safe_discard(cards, progress, r)
@@ -431,22 +439,22 @@ class HatPlayer(AIPlayer):
         # If you were instructed to play, and you can play a 5 which will help
         # a future person to clue, do that.
         if x[0] == 'play':
-            if self.min_futurehints < 0 and cards[x[1]]['name'][0] != '5':
+            if (self.min_futurehints < 0 or self.futurehints == 0) and cards[x[1]]['name'][0] != '5':
                 playablefives = [card for card in get_plays(cards, progress)
                         if card['name'][0] == '5']
                 if playablefives:
-                    if PRINTSTATS:
-                        r.stats['play 5 instead'] += 1
+                    if DEBUG:
+                        r.debug['play 5 instead'] += 1
                     return 'play', cards.index(playablefives[0])
                 else:
-                    if PRINTSTATS:
-                        r.stats["someone cannot clue, but I'll play anyway"] += 1
-                    # if not self.endgame:
-                    #     action = self.safe_discard(cards, progress, r)
-                    #     if action[0] == 'discard': return action
-                    #     action = self.modified_safe_discard(cluer, player, cards, dont_play, r)
-                    #     action = self.modified_discard(action, cards, progress, r)
-                    #     if action[0] == 'discard': return action
+                    if DEBUG:
+                        r.debug["someone cannot clue, but I have a play"] += 1
+                    if not self.endgame:
+                        action = self.safe_discard(cards, progress, r)
+                        if action[0] == 'discard': return action
+                        action = self.modified_safe_discard(cluer, player, cards, dont_play, r)
+                        action = self.modified_discard(action, cards, progress, r)
+                        if action[0] == 'discard': return action
             return x
 
         # If you are at 8 hints, hint
@@ -459,7 +467,10 @@ class HatPlayer(AIPlayer):
 
         # If we are out of hints, you must discard
         if self.min_futurehints <= 0 or self.futurehints <= 1:
-            return self.modified_discard(x, cards, progress, r)
+            action = self.modified_discard(x, cards, progress, r)
+            if action[0] == 'hint' and self.modified_hints <= 0:
+                return self.critical_discard(cards, r) # probably I should try to discard instead?
+            return action
 
         # Probably hint if everyone else is playing and you can instruct two players to do something
         if self.futureplays == r.nPlayers - 2 and self.actions_before_modified and self.futurehints >= 2:
@@ -516,7 +527,9 @@ class HatPlayer(AIPlayer):
 
     def critical_discard(self, cards, r):
         """Find the card with the highest rank card to discard, and weep"""
-        return find_highest(cards)
+        if DEBUG:
+            r.debug['instructing to discard critical card'] += 1
+        return 'discard', cards.index(find_highest(cards))
 
     def is_between(self, x, begin, end):
         """Returns whether x is (in turn order) between begin and end
@@ -604,7 +617,7 @@ class HatPlayer(AIPlayer):
                         clue = VANILLA_SUITS[1]
                     break
         if clue == '':
-            if PRINTSTATS: r.stats['clue blocked'] += 1
+            if DEBUG: r.debug['clue blocked'] += 1
             clue = cards[-1]['name'][0]
         return (target, clue)
 
@@ -642,10 +655,10 @@ class HatPlayer(AIPlayer):
         if r.turnNumber == 0:
             if r.nPlayers <= 3:
                 raise NameError('This AI works only with at least 4 players.')
-            if PRINTSTATS:
-                for s in STATVALUES:
-                    if s not in r.stats:
-                        r.stats[s] = 0
+            if DEBUG:
+                for s in DEBUGVALUES:
+                    if s not in r.debug:
+                        r.debug[s] = 0
             for i in range(n):
                 # initialize variables which contain the memory of this player.
                 # These are updated after every move of any player
@@ -668,8 +681,8 @@ class HatPlayer(AIPlayer):
                 if r.hints == 0 or (self.modified_player == me and MODIFIEDACTION):
                     if r.hints != 8:
                         return self.execute_action(myaction, r)
-                    elif PRINTSTATS:
-                        r.stats['instructed to discard at 8 clues']
+                    elif DEBUG:
+                        r.debug['instructed to discard at 8 clues']
                 #todo: also discard when you steal the last clue from someone who has to clue
                 #clue if I can get tempo on a unclued card or if at 8 hints
                 if r.hints != 8 and not(all(map(lambda a:a[0] == 'play', self.next_player_actions)) and\
@@ -684,8 +697,8 @@ class HatPlayer(AIPlayer):
             x = 3
             if self.useless_card is not None and self.useless_card in r.h[me].cards:
                 x = r.h[me].cards.index(self.useless_card)
-                if PRINTSTATS: r.stats['safe discard at 0 hints'] += 1
-            elif PRINTSTATS: r.stats['unsafe discard at 0 hints'] += 1
+                if DEBUG: r.debug['safe discard at 0 hints'] += 1
+            elif DEBUG: r.debug['unsafe discard at 0 hints'] += 1
             #todo: maybe discard the card so that the next player does something non-terrible
             return self.execute_action(('discard', x), r)
         # I'm am considering whether to give a clue
@@ -703,11 +716,13 @@ class HatPlayer(AIPlayer):
         self.next_player_actions = self.actions_before_modified + self.next_player_actions
         if x[0] == 'play':
             self.player_to_card_current[self.modified_player] = x[1], r.h[self.modified_player].cards[x[1]]['name']
+        # if (r.turnNumber == 29): print ("Info", self.given_clues, self.next_player_actions, r.hints, self.modified_hints, self.min_futurehints, r.discardpile)
         self.given_clues = []
         self.finalize_given_clue(me, r)
         # print("Now future progress is",self.cluedprogress)
         value = (value + self.action_to_number(x)) % 9
         clue = self.number_to_clue(value, me, r)
+        # todo: if clue is blocked, update my future expectations, and in future, maybe even assign a better action
         myaction = 'hint', clue
         # todo: at this point decide to discard if your clue is bad and you have a safe discard
         # if discarding, don't forget to reset some variables

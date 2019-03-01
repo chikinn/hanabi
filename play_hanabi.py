@@ -26,9 +26,9 @@ def to_json (r, action):
         dic = {"type":actionType, "target":target}
     return dic
 
-def play_one_round(gameType, players, names, verbosity, lossScore, isPoliced,writeOutput, stats):
+def play_one_round(gameType, players, names, verbosity, lossScore, isPoliced,writeOutput, debug):
     """Play a full round and return the score (int)."""
-    r = Round(gameType, players, names, verbosity, isPoliced, stats) # Instance of a single Hanabi round
+    r = Round(gameType, players, names, verbosity, isPoliced, debug) # Instance of a single Hanabi round
     r.generate_deck_and_deal_hands()
 
     while r.gameOverTimer != 0:
@@ -47,7 +47,7 @@ def play_one_round(gameType, players, names, verbosity, lossScore, isPoliced,wri
 
         r.get_play(players[r.whoseTurn]) # Play one turn.
 
-    if writeOutput or 'stop' in stats:
+    if writeOutput or 'stop' in debug:
         if not writeOutput: os.remove('log.json')
         actions = list(map(lambda action: to_json(r, action), r.playHistory))
         handSize = 4
