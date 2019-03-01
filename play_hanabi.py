@@ -48,7 +48,7 @@ def play_one_round(gameType, players, names, verbosity, lossScore, isPoliced,wri
         r.get_play(players[r.whoseTurn]) # Play one turn.
 
     if writeOutput or 'stop' in debug:
-        if not writeOutput: os.remove('log.json')
+        if not writeOutput and os.path.exists('log.json'): os.remove('log.json')
         actions = list(map(lambda action: to_json(r, action), r.playHistory))
         handSize = 4
         if r.nPlayers < 4: handSize += 1

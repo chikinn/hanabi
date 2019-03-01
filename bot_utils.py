@@ -190,3 +190,20 @@ def inverse_card_set(cardset, r):
             else:
                 inverse_set.append(newCard)
     return inverse_set
+
+def is_critical(cardname, r):
+    """Tests whether card is not played and there is no other non-discarded card with the same name
+    Does not check whether all copies of a lower rank are already discarded"""
+    if r.progress[cardname[1]] >= int(cardname[0]):
+        return False
+    return r.discardpile.count(cardname) + 1 == SUIT_CONTENTS.count(cardname[0])
+
+def find_all_lowest(l, f):
+    """Find all elements x in l where f(x) is minimal"""
+    minvalue = min([f(x) for x in l])
+    return [x for x in l if f(x) == minvalue]
+
+def find_all_highest(l, f):
+    """Find all elements x in l where f(x) is maximal"""
+    maxvalue = max([f(x) for x in l])
+    return [x for x in l if f(x) == maxvalue]

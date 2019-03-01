@@ -31,13 +31,6 @@ DEBUGVALUES = ['play 5 instead', "someone cannot clue, but I have a play", 'unsa
     'clue blocked','I misplayed','instructed to discard at 8 clues','instructing to discard critical card',
     'player did wrong action at >0 clues', 'wrong action: discard at 0 clues', 'someone performed the wrong action']
 
-def is_critical(cardname, r):
-    """Tests whether card is not played and there is no other non-discarded card with the same name
-    Does not check whether all copies of a lower rank are already discarded"""
-    if r.progress[cardname[1]] >= int(cardname[0]):
-        return False
-    return r.discardpile.count(cardname) + 1 == SUIT_CONTENTS.count(cardname[0])
-
 def next(n, r):
     """The player after n."""
     return (n + 1) % r.nPlayers
@@ -49,16 +42,6 @@ def prev(n, r):
 def prev_cardname(cardname):
     """The card with cardname below `cardname`. Doesn't check whether there is a card below"""
     return str(int(cardname[0]) - 1) + cardname[1]
-
-def find_all_lowest(l, f):
-    """Find all elements x in l where f(x) is minimal"""
-    minvalue = min([f(x) for x in l])
-    return [x for x in l if f(x) == minvalue]
-
-def find_all_highest(l, f):
-    """Find all elements x in l where f(x) is maximal"""
-    maxvalue = max([f(x) for x in l])
-    return [x for x in l if f(x) == maxvalue]
 
 class HatPlayer(AIPlayer):
 
@@ -581,22 +564,38 @@ class HatPlayer(AIPlayer):
         every skipped player adds 3
         """
         cards = r.h[target].cards
-        if len(cards[-1]['indirect']) > 0 and cards[-1]['indirect'][-1] == value:
+        if cards[-1]['indirect'] and cards[-1]['indirect'][-1] == value:
             x = 2
         elif value in r.suits:
             x = 1
         else:
             x = 0
-        nr = 3 * ((target - clueGiver - 1) % r.nPlayers) + x
-        return nr
+        if r.nPlayers == 4:
+            return 3 * ((target - clueGiver - 1) % r.nPlayers) + x
+        elif x == 2:
+            return 8
+        else:
+            return 2 * ((target - clueGiver - 1) % r.nPlayers) + x
 
     def number_to_clue(self, cluenumber, me, r):
         """Returns number corresponding to a clue."""
-        target = (me + 1 + cluenumber // 3) % r.nPlayers
+        x = cluenumber % (7 - r.nPlayers)
+        if r.nPlayers == 4:
+            target = (me + 1 + cluenumber // 3) % r.nPlayers
+        elif cluenumber != 8:
+            target = (me + 1 + cluenumber // 2) % r.nPlayers
+        else: # in 5 players, to convey clue number 8 we clue any non-newest card
+            for target in range(r.nPlayers):
+                if target != me:
+                    cards = r.h[target].cards
+                    clue = self.clue_not_newest(cards, r)
+                    if clue: return (target, clue)
+            # this can theoretically happen, but will never happen in practice
+            if DEBUG: r.debug['clue blocked'] += 1
+            target = next(me, r)
+            return (target, r.h[target].cards[-1]['name'][0])
         assert target != me
         cards = r.h[target].cards
-        x = cluenumber % 3
-        clue = ''
         if x == 0: clue = cards[-1]['name'][0]
         if x == 1:
             if cards[-1]['name'][1] != RAINBOW_SUIT:
@@ -604,22 +603,29 @@ class HatPlayer(AIPlayer):
             else:
                 clue = VANILLA_SUITS[2]
         if x == 2:
-            for i in range(len(cards)-1):
-                if cards[i]['name'][0] != cards[-1]['name'][0]:
-                    clue = cards[i]['name'][0]
-                    break
-                if cards[i]['name'][1] != cards[-1]['name'][1] and cards[-1]['name'][1] != RAINBOW_SUIT:
-                    if cards[i]['name'][1] != RAINBOW_SUIT:
-                        clue = cards[i]['name'][1]
-                    elif cards[-1]['name'][1] != VANILLA_SUITS[0]:
-                        clue = VANILLA_SUITS[0]
-                    else:
-                        clue = VANILLA_SUITS[1]
-                    break
-        if clue == '':
+            clue = self.clue_not_newest(cards, r)
+            if clue: return (target, clue)
             if DEBUG: r.debug['clue blocked'] += 1
             clue = cards[-1]['name'][0]
         return (target, clue)
+
+    def clue_not_newest(self, cards, r):
+        """Return any clue that does not touch the newest card (slot -1) in `cards`.
+        Returns False if no such clue exists"""
+        newest = cards[-1]['name']
+        for i in range(len(cards)-1):
+            cardname = cards[i]['name']
+            if cardname[0] != newest[0]:
+                return cardname[0]
+            if cardname[1] != newest[1] and newest[1] != RAINBOW_SUIT:
+                if cardname[1] != RAINBOW_SUIT:
+                    return cardname[1]
+                if newest[1] != VANILLA_SUITS[0]:
+                    return VANILLA_SUITS[0]
+                return VANILLA_SUITS[1]
+        return False
+
+
 
     def execute_action(self, myaction, r):
         """In the play function return the final action which is executed.

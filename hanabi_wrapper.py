@@ -115,7 +115,7 @@ if args.seed >= 0:
 debug = {} # a dictionary players can write into which will be printed in the end. Useful for collecting statistics
 # if you set r.debug['stop'] = 0, then the log of that game will be appended to log.json, and no new game will be started
 
-if args.output:
+if args.output and os.path.exists('log.json'):
   os.remove('log.json')
 # Play rounds.
 scores = []

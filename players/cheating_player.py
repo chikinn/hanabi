@@ -1,15 +1,14 @@
 """A smart cheating Hanabi player.
 
 Tries to make intelligent moves when looking at his own cards.  The following
-table gives the approximate percentages of this strategy reaching maximum score
-(using 6 suits).
+table gives the approximate percentages of this strategy reaching maximum score.
 
-Players | %
---------+----
-   2    | 89
-   3    | 98
-   4    | 98
-   5    | 97
+Players | % (5 suits) | % (6 suits)
+--------+-------------+-------------
+   2    |    94.7     |     90.1
+   3    |    98.2     |     98.4
+   4    |    98.0     |     98.1
+   5    |    96.4     |     97.4
 
 Possible improvements (probably this doesn't actually increase the win percentage):
 - When playing a card, prefer one you don't see in someone else's hand
@@ -18,30 +17,10 @@ Possible improvements (probably this doesn't actually increase the win percentag
 - When discarding a card you see in someone else's hand: don't do this if the
   other player has a lot of playable cards
 - When discarding the first copy of a card, prefer suits with low progress
-- In endgame, if I at least 2 more future plays than some teammate, clue instead of discard
-  (if enough clues)
 """
 
 from hanabi_classes import *
 from bot_utils import *
-
-
-def get_all_visible_cards(player, r):
-    """Return a list of the cards that player can see"""
-    l = []
-    for i in other_players(player, r):
-        l.extend(r.h[i].cards)
-    return l
-
-def count_unplayed_cards(r, progress):
-    """Return the number of cards which are not yet played
-    (TODO: exclude cards which are unplayable because they or a lower number are
-    discarded)"""
-    count = 0
-    for suit in r.suits:
-        count += 5 - progress[suit]
-    return count
-
 
 class CheatingPlayer(AIPlayer):
 
@@ -55,7 +34,7 @@ class CheatingPlayer(AIPlayer):
         (badness = 0 is used if someone can play a card and doesn't have to
           discard)
         badness = 1: discard useless card
-        badness = 2: discard card which is already in some else's hand
+        badness = 4: discard card which is already in some else's hand
         badness between 10 and 30: discard the first copy of a non-5 card (4s
         are badness 10, 3s badness 20, 2s badness 30)
         badness >= 100: discard a necessary card"""
@@ -67,18 +46,15 @@ class CheatingPlayer(AIPlayer):
             return 1, random.choice(discardCards)
         discardCards = get_visible_cards(cards, get_all_visible_cards(player,r))
         if discardCards: # discard a card which you can see (lowest first)
-            random.shuffle(discardCards)
-            return 2, find_lowest(discardCards)
+            return 4, find_lowest(discardCards)
         # note: we never reach this part of the code if there is a 1 in the
         # hand of player
         discardCards = get_nonvisible_cards(cards, r.discardpile)
-        discardCards = list(filter(lambda x: x['name'][0] != '5', discardCards))
+        discardCards = [card for card in discardCards if card['name'][0] != '5']
         if discardCards: # discard a card which is not unsafe to discard
-            random.shuffle(discardCards)
             card = find_highest(discardCards)
             return 50 - 10 * int(card['name'][0]), card
         cards_copy = list(cards)
-        random.shuffle(cards_copy)
         card = find_highest(cards_copy)
         return 600 - 100 * int(card['name'][0]), card
 
@@ -90,32 +66,34 @@ class CheatingPlayer(AIPlayer):
 
         # determine whether the game is in the endgame
         # (this can cause the player to clue instead of discard)
-        if 0 < len(r.deck) < count_unplayed_cards(r, progress):
-            endgame = count_unplayed_playable_cards(r, progress) - len(r.deck)
-        else:
-            endgame = 0
+        endgame = count_unplayed_playable_cards(r, progress) - len(r.deck)
 
+        # if r.gameOverTimer == 0 and sum(progress.values()) < len(r.suits) * 5 - 1:
+        #     r.debug['stop'] = 0
         playableCards = get_plays(cards, progress)
         if playableCards: # Play a card, if possible (lowest value first)
-            random.shuffle(playableCards)
+
             return 'play', find_lowest(playableCards)
+
+        # if r.gameOverTimer == 0:
+        #     r.debug['stop'] = 0
 
         if r.hints == 8: # Hint if you are at maximum hints
             return 'hint', (nextplayer, '5')
 
         if endgame > 0:
-            someone_can_play = False
             for i in other_players(me, r)[0:r.hints]:
+                # hint if someone can play
                 if get_plays(r.h[i].cards, progress):
-                    someone_can_play = True
-                    break
-            if someone_can_play:
-                assert r.hints > 0
-                return 'hint', (nextplayer, '4')
+                    return 'hint', (nextplayer, '4')
+                # hint if someone without useful card can discard, if I have a useful card
+                if endgame > 1 and [card for card in cards if not has_been_played(card, progress)] and\
+                not [card for card in r.h[i].cards if not has_been_played(card, progress)]:
+                    return 'hint', (nextplayer, '4')
 
         # Discard if you can safely discard or if you have no hints.
         badness, discard = self.want_to_discard(cards, me, r, progress)
-        if badness < 10 or r.hints == 0:
+        if r.hints + badness < 10 or r.hints == 0:
             return 'discard', discard
         other_badness = []
         for i in other_players(me, r)[0:r.hints]:
