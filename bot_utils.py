@@ -166,7 +166,7 @@ def get_all_useful_cardnames(r):
 
 def can_see_all_useful_cards(me, r):
     """Returns whether the player can see at least one copy of each card which is still playable"""
-    visible_cards = map(lambda x: x['name'], get_all_visible_cards(me, r))
+    visible_cards = names(get_all_visible_cards(me, r))
     useful_cards = get_all_useful_cardnames(r)
     return is_subset(useful_cards, visible_cards)
 

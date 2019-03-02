@@ -5,10 +5,10 @@ table gives the approximate percentages of this strategy reaching maximum score.
 
 Players | % (5 suits) | % (6 suits)
 --------+-------------+-------------
-   2    |    94.4     |     90.9
-   3    |    98.6     |     98.7
-   4    |    98.3     |     98.4
-   5    |    96.8     |     97.9
+   2    |    94.5     |     91.0
+   3    |    98.6     |     98.6
+   4    |    98.3     |     98.5
+   5    |    97.2     |     98.0
 
 Possible improvements (probably this doesn't actually increase the win percentage):
 - When playing a card, prefer one that allows other players to follow up in the
@@ -39,12 +39,11 @@ class CheatingPlayer(AIPlayer):
     def want_to_discard(self, cards, player, r, progress):
         """Returns a pair (badness, card) where badness indicates how bad it is
         to discard one of the cards for player and card is the least bad option.
-        (badness = 0 is used if someone can play a card and doesn't have to
-          discard)
         badness = 1: discard useless card
-        badness = 4: discard card which is already in some else's hand
-        badness between 10 and 30: discard the first copy of a non-5 card (4s
-        are badness 10, 3s badness 20, 2s badness 30)
+        badness = 3-6: discard card which is already in some else's hand
+        (depends on the number of players)
+        badness between 10 and 30: discard the first copy of a non-5 card
+        (4s are badness 10, 3s badness 20, 2s badness 30)
         badness >= 100: discard a necessary card"""
         discardCards = get_played_cards(cards, progress)
         if discardCards: # discard a card which is already played
@@ -53,10 +52,10 @@ class CheatingPlayer(AIPlayer):
         if discardCards: # discard a card which occurs twice in your hand
             return 1, discardCards[0]
         discardCards = get_visible_cards(cards, get_all_visible_cards(player,r))
-        if discardCards: # discard a card which you can see (lowest first)
-            return 4, find_lowest(discardCards)
-        # note: we never reach this part of the code if there is a 1 in the
-        # hand of player
+        if discardCards: # discard a card which you can see (lowest first).
+                         # Empirically this is slightly worse with fewer players
+            return 8 - r.nPlayers, find_lowest(discardCards)
+        # note: we never reach this part of the code if there is a 1 in the hand of player
         discardCards = get_nonvisible_cards(cards, r.discardpile)
         discardCards = [card for card in discardCards if card['name'][0] != '5']
         if discardCards: # discard a card which is not unsafe to discard
@@ -110,14 +109,20 @@ class CheatingPlayer(AIPlayer):
             return self.give_a_hint(me, r)
 
         if endgame > 0:
-            # hint if someone can play
-            for i in other_players(me, r)[0:r.hints]:
-                if get_plays(r.h[i].cards, progress):
-                    return self.give_a_hint(me, r)
+            # hint if someone can play, unless you are waiting for a low card still to be drawn
+            useful = get_all_useful_cardnames(r)
+            undrawn = [int(name[0]) for name in useful if name not in names(get_all_cards(r))]
+            # returns False if we are still waiting for a low card,
+            # in which case players should discard a more aggressively
+            # This seems to be good in 5 players (compared over 10000 games in vanilla/rainbow on seeds 0-3)
+            not_waiting_for_low_card = (not undrawn or endgame >= r.nPlayers - min(undrawn)) or r.nPlayers != 5
+            if not_waiting_for_low_card :
+                for i in other_players(me, r)[0:r.hints]:
+                    if get_plays(r.h[i].cards, progress):
+                        return self.give_a_hint(me, r)
 
             # if we are waiting for a 3, let the player with the 5 draw it
             if r.hints >= r.nPlayers - 1 and len(r.deck) == 2:
-                assert not all_useful_cards_are_drawn(r)
                 suits = [suit for suit in r.suits if r.progress[suit] == 2]
                 if suits:
                     # r.debug['stop'] = 0
@@ -134,12 +139,11 @@ class CheatingPlayer(AIPlayer):
                         else:
                             return self.give_a_hint(me, r)
 
-            # hint if someone without useful card can discard, if I have a useful card and could draw another useful card
-            for i in other_players(me, r)[0:r.hints]:
-                if [card for card in cards if not has_been_played(card, progress)] and\
-                not [card for card in r.h[i].cards if not has_been_played(card, progress)] and\
-                not all_useful_cards_are_drawn(r):
-                    return self.give_a_hint(me, r)
+            # hint if the next player has no useful card, but I do, and could draw another one
+            if r.hints and [card for card in cards if not has_been_played(card, progress)] and\
+            not [card for card in r.h[next(me, r)].cards if not has_been_played(card, progress)] and\
+            not_waiting_for_low_card and not all_useful_cards_are_drawn(r):
+                return self.give_a_hint(me, r)
 
 
         # Discard if you can safely discard or if you have no hints.
