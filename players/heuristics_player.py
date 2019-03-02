@@ -2,7 +2,7 @@
   This bot looks at the probability that a given card is playable
   and plays it if above a threshold value that varies based on
   number of bombs played
-  Indirect hints have no multiplier on their 
+  Indirect hints have no multiplier on their
 
 """
 
@@ -75,10 +75,10 @@ class HeuristicsUtils(object):
 
     def scale_probability(self, probability, scale):
         return probability ** (1.0 / scale)
-        
+
     def get_probability_discardable(self, card):
 
-        useful_cardnames = get_all_useful_cardnames(self.player, self.r)
+        useful_cardnames = get_all_useful_cardnames(self.r)
 
         # If we know for sure what the card is
         if (card['known']):
@@ -90,7 +90,7 @@ class HeuristicsUtils(object):
         for card_name, probability in probability_of_cards.items():
             if card_name in useful_cardnames:
                 overallProbability += probability
-        
+
         print(overallProbability)
 
     def get_probability_playable(self, card, location):
@@ -153,7 +153,7 @@ class HeuristicsTracking(object):
         self.on = on
         self.playable_cards = []
         self.unplayable_cards = []
-        
+
     def record_playable(self, card, probability, progress):
         if not self.on:
             return

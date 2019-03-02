@@ -5,6 +5,10 @@ will use it, however, then it doesn't belong here."""
 
 from hanabi_classes import *
 
+def names(cards):
+    """Returns the names of a list of cards"""
+    return [card['name'] for card in cards]
+
 def get_plays(cards, progress):
     """Return a list of plays (subset of input); call only on visible cards!"""
     return [card for card in cards if is_playable(card, progress)]
@@ -25,14 +29,12 @@ def has_been_played(card, progress):
 
 def get_duplicate_cards(cards):
     """Return the sublist of duplicate cards; call only on visible cards!"""
-    names = list(map(lambda x: x['name'], cards))
-    return list(filter(lambda x: names.count(x['name']) > 1, cards))
+    return [card for card in cards if names(cards).count(card['name']) > 1]
 
 def get_visible_cards(cards1, cards2):
     """Return a list of the intersection of cards1 and cards2; call only on
     visible cards!"""
-    names2 = [card['name'] for card in cards2]
-    return [card for card in cards1 if card['name'] in names2]
+    return [card for card in cards1 if card['name'] in names(cards2)]
 
 def get_nonvisible_cards(cards1, names2):
     """Return a list of cards that are in cards1 but not names2; call only on
@@ -120,6 +122,13 @@ def get_all_visible_cards(player, r):
         l.extend(r.h[i].cards)
     return l
 
+def get_all_cards(r):
+    """Returns list of cards in all hands"""
+    l = []
+    for i in range(r.nPlayers):
+        l.extend(r.h[i].cards)
+    return l
+
 def count_unplayed_cards(r, progress):
     """Returns the number of cards which are not yet played, including cards
     which are unplayable because all those cards (or cards of a value below it)
@@ -141,7 +150,7 @@ def count_unplayed_playable_cards(r, progress):
                 break
     return n
 
-def get_all_useful_cardnames(me, r):
+def get_all_useful_cardnames(r):
     """Gets all cards that could be playable in future"""
     l = []
     for suit in r.suits:
@@ -153,17 +162,13 @@ def get_all_useful_cardnames(me, r):
             if r.discardpile.count(s) == SUIT_CONTENTS.count(str(i)):
                 break
             l.append(s)
-
     return l
 
 def can_see_all_useful_cards(me, r):
     """Returns whether the player can see at least one copy of each card which is still playable"""
     visible_cards = map(lambda x: x['name'], get_all_visible_cards(me, r))
-    useful_cards = get_all_useful_cardnames(me, r)
-    for card in useful_cards:
-        if card not in visible_cards:
-            return False
-    return True
+    useful_cards = get_all_useful_cardnames(r)
+    return is_subset(useful_cards, visible_cards)
 
 def get_all_knowable_cards(player, r):
     """This gets all card names that are known including cards that are:
@@ -174,7 +179,7 @@ def get_all_knowable_cards(player, r):
     l = []
     # Discard pile includes Discarded and Played
     l.extend(r.discardpile)
-    l.extend([card['name'] for card in get_all_visible_cards(player, r)])
+    l.extend(names(get_all_visible_cards(player, r)))
     l.extend([card['name'] for card in r.h[player].cards if card['known']])
     return l
 
@@ -200,10 +205,41 @@ def is_critical(cardname, r):
 
 def find_all_lowest(l, f):
     """Find all elements x in l where f(x) is minimal"""
+    if len(l) == 1: return l
     minvalue = min([f(x) for x in l])
     return [x for x in l if f(x) == minvalue]
 
 def find_all_highest(l, f):
     """Find all elements x in l where f(x) is maximal"""
+    if len(l) == 1: return l
     maxvalue = max([f(x) for x in l])
     return [x for x in l if f(x) == maxvalue]
+
+def is_subset(l1, l2):
+    """Checks whether list l1 is a subset of list l2"""
+    for x in l1:
+        if x not in l2:
+            return False
+    return True
+
+def is_between(x, begin, end):
+    """Returns whether x is (in turn order) between begin (inclusive) and end
+    (exclusive). This function assumes that x,
+    begin, end are smaller than the number of players (and at least 0).
+    If begin == end, this is false."""
+    return begin <= x < end or end < begin <= x or x < end < begin
+
+def is_between_inclusive(x, begin, end):
+    """Returns whether x is (in turn order) between begin (inclusive) and end
+    (inclusive). This function assumes that x,
+    begin, end are smaller than the number of players (and at least 0).
+    If begin == end, this is only true if x == begin == end."""
+    return begin <= x <= end or end < begin <= x or x <= end < begin
+
+def next(n, r):
+    """The player after n."""
+    return (n + 1) % r.nPlayers
+
+def prev(n, r):
+    """The player after n."""
+    return (n - 1) % r.nPlayers

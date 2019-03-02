@@ -31,14 +31,6 @@ DEBUGVALUES = ['play 5 instead', "someone cannot clue, but I have a play", 'unsa
     'clue blocked','I misplayed','instructed to discard at 8 clues','instructing to discard critical card',
     'player did wrong action at >0 clues', 'wrong action: discard at 0 clues', 'someone performed the wrong action']
 
-def next(n, r):
-    """The player after n."""
-    return (n + 1) % r.nPlayers
-
-def prev(n, r):
-    """The player after n."""
-    return (n - 1) % r.nPlayers
-
 def prev_cardname(cardname):
     """The card with cardname below `cardname`. Doesn't check whether there is a card below"""
     return str(int(cardname[0]) - 1) + cardname[1]
@@ -93,7 +85,7 @@ class HatPlayer(AIPlayer):
         if self.given_clues and self.given_clues[0]['cluer'] == nextcluer: # this happens if the next player was the last player to clue and gave me a play clue
             self.player_to_card = {}
         else:
-            self.player_to_card = { i:v for i, v in self.player_to_card_current.items() if not self.given_clues or not self.is_between(i, self.given_clues[0]['cluer'], nextcluer)}
+            self.player_to_card = { i:v for i, v in self.player_to_card_current.items() if not self.given_clues or not is_between_inclusive(i, self.given_clues[0]['cluer'], nextcluer)}
         self.card_to_player = {nm:i for i, (n, nm) in self.player_to_card.items() }
         cluer = self.given_clues[0]['cluer'] if self.given_clues else me
         i = next(cluer, r)
@@ -177,7 +169,7 @@ class HatPlayer(AIPlayer):
         # I don't want to do this if this was a clue directed to me which I just received, because I will update the clue values for these players as they play
         # This is problematic if it is not my turn yet
         self.actions_before_modified = []
-        if self.is_between(i, cluer, self.modified_player) and (i == next(me, r) or i == me):
+        if is_between_inclusive(i, cluer, self.modified_player) and (i == next(me, r) or i == me):
             while i in self.player_to_card:
                 self.player_to_card_current[i] = self.player_to_card[i]
                 action = ('play', self.player_to_card[i][0])
@@ -186,7 +178,7 @@ class HatPlayer(AIPlayer):
                 i = next(i, r)
             assert i == self.modified_player
         if cluer == me: return value
-        if self.is_between(self.modified_player, cluer, me):
+        if is_between_inclusive(self.modified_player, cluer, me):
             # print("player",me,"sees that the clue of player",cluer,"was value",self.given_clues[0]['value'],
             # "and other players have done",value,"so remaining is",(self.given_clues[0]['value'] - value) % 9)
             self.given_clues[0]['value'] = (self.given_clues[0]['value'] - value) % 9
@@ -283,7 +275,7 @@ class HatPlayer(AIPlayer):
                     self.card_to_player.pop(cardname)
                 else:
                     # print(me, "thinks that player", player, "didn't play the right card. He did",action,"cardname",cardname,"dics",
-                    #     self.player_to_card,self.card_to_player,"current hand",[card['name'] for card in r.h[player].cards])
+                    #     self.player_to_card,self.card_to_player,"current hand",names(r.h[player].cards))
                     cardname = self.player_to_card[player][1]
                     # if not (action[0] == 'discard' and self.player_to_card[player][0] == action[1]):
                     #     index = self.player_to_card[player] - (0 if action[0] == 'hint' or action[1] > self.player_to_card[player] else 1)
@@ -310,7 +302,7 @@ class HatPlayer(AIPlayer):
             return True
         # test whether the card in to make `cardname` playable is played on time
         if prev_cardname(cardname) in dic:
-            return self.is_between(dic[prev_cardname(cardname)], cluer, player)
+            return is_between_inclusive(dic[prev_cardname(cardname)], cluer, player)
         # this code is not often reached, but can happen if this card is already played by a later clue then the one you are currently resolving
         return False
 
@@ -513,13 +505,6 @@ class HatPlayer(AIPlayer):
         if DEBUG:
             r.debug['instructing to discard critical card'] += 1
         return 'discard', cards.index(find_highest(cards))
-
-    def is_between(self, x, begin, end):
-        """Returns whether x is (in turn order) between begin and end
-        (inclusive) modulo the number of players. This function assumes that x,
-        begin, end are smaller than the number of players (and at least 0).
-        If begin == end, this is only true id x == begin == end."""
-        return begin <= x <= end or end < begin <= x or x <= end < begin
 
     def list_between(self, begin, end, r):
         """Returns the list of players from begin to end (inclusive)."""
