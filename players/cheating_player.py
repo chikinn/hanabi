@@ -5,10 +5,10 @@ table gives the approximate percentages of this strategy reaching maximum score.
 
 Players | % (5 suits) | % (6 suits)
 --------+-------------+-------------
-   2    |    94.5     |     91.0
-   3    |    98.6     |     98.6
-   4    |    98.3     |     98.5
-   5    |    97.2     |     98.0
+   2    |    94.9     |     90.6
+   3    |    98.5     |     98.5
+   4    |    98.2     |     98.2
+   5    |    97.0     |     97.8
 
 Possible improvements (probably this doesn't actually increase the win percentage):
 - When playing a card, prefer one that allows other players to follow up in the
