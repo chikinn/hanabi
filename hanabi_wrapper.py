@@ -152,4 +152,4 @@ elif args.verbosity == 'silent': # Still print score for silent single round
     logger.info('Score: ' + str(scores[0]))
 
 debug = {k:v for k, v in debug.items() if v != 0}
-if debug: print(debug)
+if debug: print("debug info:",debug)
