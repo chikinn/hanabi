@@ -6,8 +6,8 @@ description of the strategy. The following table gives the approximate
 percentages of this strategy reaching maximum score (over 10000 games).
 Players | % (no variant) | % (purple) | % (rainbow)
 --------+----------------+------------+-------------
-   4    |      92.4      |   93.2     |    92.9
-   5    |      89.8      |   95.1     |    95.1
+   4    |      92.5      | 93.2 (old) |    93.0
+   5    |      89.8      | 95.1 (old) |    95.1
 """
 
 # ideas for improvement:
@@ -281,8 +281,8 @@ class HatPlayer(AIPlayer):
                     # todo: check if the done action was a correct play, and modify progress accordingly
                     self.clued_progress_current[cardname[1]] = r.progress[cardname[1]]
                     self.clued_progress[cardname[1]] = r.progress[cardname[1]]
-            elif action[0] == 'play' and DEBUG:
-                r.debug['player played when not instructed to'] += 1 # if this actually happens, we should modify progress
+            # elif action[0] == 'play' and (player - me - 1) % r.nPlayers < len(self.next_player_actions) and DEBUG:
+            #     r.debug['player played when not instructed to'] += 1 # if this actually happens, we should modify progress
 
         if action[0] != 'hint':
             return
@@ -657,7 +657,7 @@ class HatPlayer(AIPlayer):
         if action[0] == 'discard': return action
         discardCards = get_nonvisible_cards(cards, r.discardpile)
         discardCards = [card for card in discardCards if card['name'][0] != '5' and not is_playable(card, progress)]
-        assert all(map(lambda x: x['name'][0] != '1', discardCards))
+        assert all([card['name'][0] != '1' for card in discardCards])
         if discardCards:
             discardCard = find_highest(discardCards)
             return 'discard', cards.index(discardCard)
@@ -703,8 +703,13 @@ class HatPlayer(AIPlayer):
             #print("My action is",myaction)
             if myaction[0] == 'play':
                 return self.execute_action(myaction, r)
-            if myaction[0] == 'discard' and self.want_to_discard(myaction, r):
-                return self.execute_action(myaction, r)
+            if myaction[0] == 'discard' and (not r.hints or (me == self.modified_player and MODIFIEDACTION)):
+                if r.hints != 8:
+                    return self.execute_action(myaction, r)
+                elif DEBUG: # this can happen with a blocked clue
+                    r.debug['BUG: instructed to discard at 8 clues']
+
+
 
         if not r.hints: # I cannot hint without clues
             x = 3
@@ -714,15 +719,17 @@ class HatPlayer(AIPlayer):
                 x = r.h[me].cards.index(self.useless_card)
                 if DEBUG: r.debug['safe discard at 0 clues'] += 1
             elif DEBUG: r.debug['unsafe discard at 0 clues'] += 1
-            #todo: maybe discard the card so that the next player does something non-terrible
             return self.execute_action(('discard', x), r)
 
-        # I'm am considering whether to give a clue
+    # I'm am considering whether to give a clue
+        # the number of players that are going to play when I don't give a clue
+        can_discard = self.modified_player != me
+        prev_plays = self.next_player_actions
+        prev_cluer = (me + len(prev_plays) + 1) % r.nPlayers
 
         # We first compute the value of all plays other than that of modified_player
         value = self.initialize_given_clue(me, me, r)
-
-        # x = self.standard_action(me, self.modified_player, self.will_be_played, self.clued_progress, self.card_to_player, self.player_to_card, r)
+        # Now we need to give a clue to modified_player
         self.prepare_modified_action(r)
         x = self.modified_action(me, self.modified_player, self.will_be_played, self.clued_progress, self.card_to_player, self.player_to_card, r)
         # print("modified action for player",self.modified_player,"is",x)
@@ -730,6 +737,12 @@ class HatPlayer(AIPlayer):
         self.resolve_clue(x, cardname, self.modified_player)
         self.actions_before_modified.append(x)
         self.next_player_actions = self.actions_before_modified + self.next_player_actions
+
+        # decide whether I want to discard instead
+        y = self.want_to_discard(x, prev_plays, prev_cluer, r)
+        if can_discard and y:
+            self.clued_progress_current = self.clued_progress.copy()
+            return self.execute_action(y, r)
 
         # todo: at this point decide to discard if your clue is bad and you have a safe discard
         self.finalize_given_clue(me, r)
@@ -741,30 +754,42 @@ class HatPlayer(AIPlayer):
         return self.execute_action(myaction, r)
 
     ### Other functions called (only) by the main function
-    def want_to_discard(self, myaction, r):
-        """If I have received a discard clue, do I want to discard?"""
+    def want_to_discard(self, modified_action, prev_plays, prev_cluer, r):
+        """If I have received a discard clue, do I want to discard?
+        Returns either False or the discard action."""
         me = r.whoseTurn
-        cluer = (me + len(self.next_player_actions) + 1) % r.nPlayers
-        # todo: we should decide whether to discard after we check what clue we can give.
+        count_prev_plays = len([action for action in prev_plays if action[0] == 'play'])
+        diff = (self.modified_player - me - 1) % r.nPlayers
+        prev_modified_action = prev_plays[diff] if len(prev_plays) > diff else 'hint', 0
+        assert r.hints
+        # todo:
         # - give a clue if you can get tempo on a card in the hand of a player before `cluer`
         # - discard when you steal the last clue from someone who has to clue
-        if not r.hints:
-            return True
-        if r.hints == 8:
-            if DEBUG and self.modified_player == me and MODIFIEDACTION:
-                r.debug['BUG: instructed to discard at 8 clues']
+        if r.hints == 8:                           return False
+        if self.useless_card is None:              return False
+        if self.useless_card not in r.h[me].cards: return False
+        card = r.h[me].cards.index(self.useless_card)
+
+        #often clue if I can get tempo on a unclued card
+        count_current_plays = len([action for action in self.next_player_actions if action[0] == 'play'])
+        # print(me, prev_plays, count_prev_plays, count_current_plays, self.endgame, prev_modified_action, modified_action, r.hints, self.useless_card['name'])
+        if modified_action[0] == 'play' and (self.endgame or prev_modified_action[0] == 'hint'): #or count_prev_plays + 2 <= count_current_plays
             return False
-        if self.modified_player == me and MODIFIEDACTION:
-            return True
-        #clue if I can get tempo on a unclued card or if at 8 hints
-        if all(map(lambda a:a[0] == 'play', self.next_player_actions)) and\
-            get_plays(r.h[cluer].cards, self.clued_progress):
-            return False
-        #if not in endgame, or with at most 1 clue, discard
-        if len(r.deck) >= count_unplayed_playable_cards(r, r.progress):
-            return True
+
+        # discard if this leaves us at 0 clues.
+        # todo: I can make this check better: we want to check the number of clues for the first discarding player
+        # (which might be after modified_player and might be me), and check whether they have a known useless card in hand
+        if not self.modified_hints:
+            return 'discard', card
+
+        #if I cannot clue any not in endgame, or with at most 1 clue, discard
+        if not self.endgame:
+            return 'discard', card
         if r.hints <= 1:
-            return True
+            return 'discard', card
+        if not count_current_plays:
+            return 'discard', card
+        return False
 
     def execute_action(self, myaction, r):
         """In the play function return the final action which is executed.
