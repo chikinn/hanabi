@@ -6,7 +6,7 @@ description of the strategy. The following table gives the approximate
 percentages of this strategy reaching maximum score (over 10000 games).
 Players | % (no variant) | % (purple) | % (rainbow)
 --------+----------------+------------+-------------
-   4    |      92.4      |   93.2     |    92.5
+   4    |      92.4      |   93.2     |    92.9
    5    |      89.8      |   95.1     |    95.1
 """
 
@@ -27,9 +27,10 @@ from copy import copy
 # If false, the clued player can clue instead of discarding
 MODIFIEDACTION = True
 DEBUG = True
-DEBUGVALUES = ['play 5 instead', "someone cannot clue, but I have a play", 'unsafe discard at 0 clues','safe discard at 0 clues',\
-    'clue blocked','I misplayed','instructed to discard at 8 clues','instructing to discard critical card',
-    'player did wrong action at >0 clues', 'wrong action: discard at 0 clues', 'someone performed the wrong action']
+DEBUGVALUES = ['play 5 instead', 'someone cannot clue, but I have a play', 'unsafe discard at 0 clues','safe discard at 0 clues',\
+    'clue blocked', 'I misplayed', 'BUG: instructed to discard at 8 clues', 'BUG: instructed to clue with 0 clues', 'instructing to discard critical card',
+    'player did wrong action at >0 clues', 'player did not play', 'player played wrong card', 'wrong action: discard at 0 clues', 'someone performed the wrong action',
+    'player played when not instructed to']
 
 
 ### General utility functions, maybe these should be moved to bot_utils.py
@@ -183,6 +184,8 @@ class HatPlayer(AIPlayer):
         to interpret future clues and give clues myself. These will be updated by the
         function 'think_at_turn_start', which is executed for every player at the start of every turn,
         and also when giving a clue."""
+        # do I have a card which can be safely discarded?
+        self.useless_card = None # todo, make this a list, for all players, and stack safe discards when you would currently give no new information to a player
         # information of all clues given, which are not fully interpreted yet. It is a list of given clues
         # Every clue consists of a dict with as info:
         # 'value': clue value
@@ -191,7 +194,7 @@ class HatPlayer(AIPlayer):
         # 'discarded': the discard pile the moment the clue is given
         self.given_clues = []
 
-    # The following four variables consist of extra information about the 0-th given_clue.
+    # The following five variables consist of extra information about the 0-th given_clue.
     # todo: There is some redundant information, maybe we can refactor some away.
         # what the other players will do with that clue, in turn order
             # note to self: this doesn't seem to be used in an essential way outside my turn currently. I could use it to update memory if someone did the wrong action
@@ -204,6 +207,7 @@ class HatPlayer(AIPlayer):
         self.expected_discards = {}
         # the state of the piles after all players play into the *previous* clue, including plays from the 0-th clue.
         # This is the same as r.progress most of the time, except when a player played a card from a clue after the one I'm currently interpreting (i.e. given_clue[n] for n > 0)
+        # Note: this does not get reset when a new clue is given, so it needs to be up to date at all times (in contrast to the previous four variables).
         self.clued_progress_current = {suit : 0 for suit in r.suits}
     # The following three variables consists of information from previous clues, used to interpret the current clue
         # the state of the piles after all players play into the *previous* clue. The 0-th clue can instruct players to play cards on top of these
@@ -213,8 +217,6 @@ class HatPlayer(AIPlayer):
         self.card_to_player = {}
         # stores items like 0: (n, name) if player 0 is intstructed to play slot n containing card name by the previous clue
         self.player_to_card = {}
-        # do I have a card which can be safely discarded?
-        self.useless_card = None # todo, make this a list, for all players, and stack safe discards when you would currently give no new information to a player
 
 
     ### Functions related to updating memory (information about given clues)
@@ -263,6 +265,11 @@ class HatPlayer(AIPlayer):
                     self.player_to_card.pop(player)
                     self.card_to_player.pop(cardname)
                 else:
+                    if DEBUG:
+                        if action[0] != 'play':
+                            r.debug['player did not play'] += 1
+                        else:
+                            r.debug['player played wrong card'] += 1
                     # print(me, "thinks that player", player, "didn't play the right card. He did",action,"cardname",cardname,"dics",
                     #     self.player_to_card,self.card_to_player,"current hand",names(r.h[player].cards))
                     cardname = self.player_to_card[player][1]
@@ -271,6 +278,11 @@ class HatPlayer(AIPlayer):
                     #     cardname = r.h[player].cards[index]['name']
                     self.player_to_card.pop(player)
                     self.card_to_player.pop(cardname)
+                    # todo: check if the done action was a correct play, and modify progress accordingly
+                    self.clued_progress_current[cardname[1]] = r.progress[cardname[1]]
+                    self.clued_progress[cardname[1]] = r.progress[cardname[1]]
+            elif action[0] == 'play' and DEBUG:
+                r.debug['player played when not instructed to'] += 1 # if this actually happens, we should modify progress
 
         if action[0] != 'hint':
             return
@@ -410,7 +422,7 @@ class HatPlayer(AIPlayer):
             # print("player",me,"sees that the clue of player",cluer,"was value",self.given_clues[0]['value'],
             # "and other players have done",value,"so remaining is",(self.given_clues[0]['value'] - value) % 9)
             self.given_clues[0]['value'] = (self.given_clues[0]['value'] - value) % 9
-            if next(me, r) == r.whoseTurn and self.given_clues[0]['value'] != 0:
+            if DEBUG and next(me, r) == r.whoseTurn and self.given_clues[0]['value'] != 0:
                 # this can happen if someone didn't perform the right action, or the cluer didn't give the correct clue
                 r.debug['someone performed the wrong action'] += 1
             return
@@ -695,8 +707,9 @@ class HatPlayer(AIPlayer):
                 return self.execute_action(myaction, r)
 
         if not r.hints: # I cannot hint without clues
-            self.next_player_actions = []
             x = 3
+            if DEBUG and me == self.modified_player:
+                r.debug['BUG: instructed to clue with 0 clues'] += 1
             if self.useless_card is not None and self.useless_card in r.h[me].cards:
                 x = r.h[me].cards.index(self.useless_card)
                 if DEBUG: r.debug['safe discard at 0 clues'] += 1
@@ -739,7 +752,7 @@ class HatPlayer(AIPlayer):
             return True
         if r.hints == 8:
             if DEBUG and self.modified_player == me and MODIFIEDACTION:
-                r.debug['instructed to discard at 8 clues']
+                r.debug['BUG: instructed to discard at 8 clues']
             return False
         if self.modified_player == me and MODIFIEDACTION:
             return True
@@ -769,6 +782,7 @@ class HatPlayer(AIPlayer):
         if myaction[0] == 'play' and r.hints == 8 and \
             cards[myaction[1]]['name'][0] == '5' and r.log:
             print("Wasting a clue")
+        if myaction[0] != 'play': self.next_player_actions = []
         # I'm not clued anymore if I don't play
         if myaction[0] == 'hint':
             return myaction
