@@ -199,9 +199,15 @@ def inverse_card_set(cardset, r):
 def is_critical(cardname, r):
     """Tests whether card is not played and there is no other non-discarded card with the same name
     Does not check whether all copies of a lower rank are already discarded"""
-    if r.progress[cardname[1]] >= int(cardname[0]):
+    return is_critical_aux(cardname, r.progress, r.discardpile)
+
+def is_critical_aux(cardname, progress, discardpile):
+    """Same as is_critical, but takes the progress and discardpile as arguments. Useful if you want to check
+    whether something was critical at another time"""
+    if progress[cardname[1]] >= int(cardname[0]):
         return False
-    return r.discardpile.count(cardname) + 1 == SUIT_CONTENTS.count(cardname[0])
+    return discardpile.count(cardname) + 1 == SUIT_CONTENTS.count(cardname[0])
+
 
 def find_all_lowest(l, f):
     """Find all elements x in l where f(x) is minimal"""
