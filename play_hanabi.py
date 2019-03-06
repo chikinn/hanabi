@@ -26,8 +26,9 @@ def to_json (r, action):
         dic = {"type":actionType, "target":target}
     return dic
 
-def play_one_round(gameType, players, names, verbosity, lossScore, isPoliced,writeOutput, debug):
+def play_one_round(gameType, players, names, verbosity, lossScore, isPoliced, writeOutput, debug):
     """Play a full round and return the score (int)."""
+
     r = Round(gameType, players, names, verbosity, isPoliced, debug) # Instance of a single Hanabi round
     r.generate_deck_and_deal_hands()
 
@@ -53,10 +54,7 @@ def play_one_round(gameType, players, names, verbosity, lossScore, isPoliced,wri
         handSize = 4
         if r.nPlayers < 4: handSize += 1
         startDeck = list(map(lambda card: {"rank": int(card[0]), "suit": r.suits.index(card[1])}, r.startingDeck))
-        # we need to reverse the starting hands
-        # startingHands = list(map(lambda i: startDeck[slice(i*handSize,(i+1)*handSize)][::-1], range(r.nPlayers)))
-        # startDeck = [item for x in startingHands for item in x] + startDeck[r.nPlayers*handSize:] # reverse starting hands
-        notes = [[]] * len(names)
+        notes = [[debug[('note', i, c)] for c in range(10 * (5 if gameType == 'vanilla' else 6))] for i in range(r.nPlayers)]
         players = names
         if gameType == 'rainbow': variant = "Rainbow (6 Suits)"
         if gameType == 'purple': variant = "Six Suits"
@@ -65,6 +63,10 @@ def play_one_round(gameType, players, names, verbosity, lossScore, isPoliced,wri
         with io.open('log.json', 'a', encoding='utf-8') as f:
             f.write(json.dumps(output, ensure_ascii=False))
             f.write('\n\n')
+        for i in range(len(players)):
+            for c in range(10 * (5 if gameType == 'vanilla' else 6)):
+                debug[('note', i, c)] = ''
+
 
     if r.lightning == N_LIGHTNING and lossScore == 'zero':
         return 0 # Award no points for a loss

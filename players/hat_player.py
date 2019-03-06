@@ -19,10 +19,10 @@ from copy import copy
 # If false, the clued player can clue instead of discarding
 MODIFIEDACTION = True
 DEBUG = True
-DEBUGVALUES = ['play 5 instead', 'someone cannot clue, but I have a play', 'unsafe discard at 0 clues','safe discard at 0 clues',\
+DEBUGVALUES = ['play 5 instead', 'someone cannot clue, but I have a play', 'unsafe discard at 0 clues', 'safe discard at 0 clues', \
     'clue blocked', 'I misplayed', 'BUG: instructed to discard at 8 clues', 'BUG: instructed to clue with 0 clues', 'instructing to discard critical card',
     'player did wrong action at >0 clues', 'player did not play', 'player played wrong card', 'wrong action: discard at 0 clues', 'someone performed the wrong action',
-    'player played when not instructed to','we can use the clue from a 5 to reach another player in endgame','yolo','successful yolo','unsuccessful yolo']
+    'player played when not instructed to', 'we can use the clue from a 5 to reach another player in endgame', 'yolo', 'successful yolo', 'unsuccessful yolo']
 
 
 ### General utility functions, maybe these should be moved to bot_utils.py
@@ -237,15 +237,15 @@ class HatPlayer(AIPlayer):
             if action[0] != 'play': return
             if card['misplayed'] and DEBUG:
                 r.debug['I misplayed'] += 1
-            self.resolve_clue(action, cardname, player)
+            self.resolve_clue(action, cardname, player, r)
             if self.given_clues: # this can be false if you yolo in the endgame
                 self.resolve_given_clues(me, r)
             assert not self.given_clues
             return
         # If I'm clued, update my value
         if self.given_clues:
-            # print(me,action,player,cardname,self.resolve_action(action, cardname, player))
-            self.given_clues[0]['value'] -= self.resolve_action(action, cardname, player)
+            # print(me,action,player,cardname,self.resolve_action(action, cardname, player, r))
+            self.given_clues[0]['value'] -= self.resolve_action(action, cardname, player, r)
             self.given_clues[0]['value'] = self.given_clues[0]['value'] % 9
         else:
             if DEBUG:
@@ -295,20 +295,20 @@ class HatPlayer(AIPlayer):
         if len(self.given_clues) == 1:
             self.initialize_given_clue(player, me, r)
 
-    def resolve_action(self, action, cardname, player):
+    def resolve_action(self, action, cardname, player, r):
         """Update variables after the action `action` is performed.
         Returns the value of the clued action."""
         clued_action = self.clued_action(action, cardname, player)
         if clued_action[0] == 'play':
             assert clued_action == action
-        return self.resolve_clue(clued_action, cardname, player)
+        return self.resolve_clue(clued_action, cardname, player, r)
 
     def get_cardname(self, action, player, r):
         """Returns the name of the played/discarded card, or "" if a hint was given.
         Only call this function if `action` still has to be performed."""
         return r.h[player].cards[action[1]]['name'] if action[0] != 'hint' else ""
 
-    def resolve_clue(self, action, cardname, player):
+    def resolve_clue(self, action, cardname, player, r):
         """Update variables when action `action` was clued to a player.
         Returns the value of the clue."""
         if action[0] == 'play':
@@ -317,6 +317,13 @@ class HatPlayer(AIPlayer):
             # In that case we don't want to decrease clued_progress_current.
             if self.clued_progress_current[cardname[1]] < int(cardname[0]):
                 self.clued_progress_current[cardname[1]] = int(cardname[0])
+        if DEBUG and action[0] != 'hint' and action[1] < len(r.h[player].cards):
+            card = r.h[player].cards[action[1]]
+            if card['name'] == cardname:
+                s = ('note', self.me, card['cardNo'])
+                if r.debug[s]:
+                    r.debug[s] += ' | '
+                r.debug[s] += 't' + str(r.turnNumber + 1) + ': ' + action[0]
         return self.action_to_number(action)
 
     def clued_action(self, action, cardname, player):
@@ -382,7 +389,7 @@ class HatPlayer(AIPlayer):
             x = self.standard_action(cluer, i, self.will_be_played, self.clued_progress, self.card_to_player, self.player_to_card, discardpile, r)
             cardname = self.get_cardname(x, i, r)
             # print(me,x,i,cardname,self.action_to_number(x),self.resolve_clue(x, cardname, i))
-            value += self.resolve_clue(x, cardname, i)
+            value += self.resolve_clue(x, cardname, i, r)
             self.next_player_actions.append(x)
             if x[0] == 'play':
                 self.will_be_played.append(cardname)
@@ -395,7 +402,7 @@ class HatPlayer(AIPlayer):
             while i in self.given_clues[0]['plays']:
                 action, card = self.given_clues[0]['plays'][i]
                 cardname = card['name'] if action[0] != 'hint' else ""
-                value += self.resolve_action(action, cardname, i)
+                value += self.resolve_action(action, cardname, i, r)
                 i = next(i, r)
             assert i == r.whoseTurn
             # If it's my turn, I now know what my action is
@@ -432,7 +439,7 @@ class HatPlayer(AIPlayer):
         # I now need to determine the action assigned to the modified player
         m_action = self.number_to_action((self.given_clues[0]['value'] - value) % 9)
         cardname = self.get_cardname(m_action, self.modified_player, r)
-        self.resolve_clue(m_action, cardname, self.modified_player)
+        self.resolve_clue(m_action, cardname, self.modified_player, r)
         self.actions_before_modified.append(m_action)
         self.next_player_actions = self.actions_before_modified + self.next_player_actions
 
@@ -656,7 +663,7 @@ class HatPlayer(AIPlayer):
         cluer = r.whoseTurn
         cards = r.h[self.modified_player].cards
 
-        if not (self.futureplays == 1 and self.endgame == 1 and not [card for card in cards if not has_been_played(card,r.progress)]):
+        if not (self.futureplays == 1 and self.endgame == 1 and not [card for card in cards if not has_been_played(card, r.progress)]):
             return False
         # discard unless you see all useful cards and have enough hints
         all_cards_visible = is_subset(get_all_useful_cardnames(r), names(get_all_visible_cards(cluer, r)))
@@ -745,7 +752,7 @@ class HatPlayer(AIPlayer):
                 for s in DEBUGVALUES:
                     if s not in r.debug:
                         r.debug[s] = 0
-                # for i in [0,1]:
+                # for i in [0, 1]:
                 #     for j in range(4):
                 #         s = 'yolo: played ' + str(i) + ', correct was ' + str(j)
                 #         if s not in r.debug:
@@ -812,7 +819,7 @@ class HatPlayer(AIPlayer):
         x = self.modified_action(r)
         # print("modified action for player",self.modified_player,"is",x)
         cardname = self.get_cardname(x, self.modified_player, r)
-        self.resolve_clue(x, cardname, self.modified_player)
+        self.resolve_clue(x, cardname, self.modified_player, r)
         self.actions_before_modified.append(x)
         self.next_player_actions = self.actions_before_modified + self.next_player_actions
 
@@ -877,7 +884,7 @@ class HatPlayer(AIPlayer):
             print("Cheating! Discarding with 8 available hints")
         if myaction[0] == 'discard' and 0 < len(r.deck) < \
             count_unplayed_playable_cards(r, r.progress) and r.verbose:
-            print("Discarding in endgame with",r.hints,"clue" + ("s" if r.hints != 1 else "") + ".")
+            print("Discarding in endgame with", r.hints, "clue" + ("s" if r.hints != 1 else "") + ".")
         if myaction[0] == 'play' and r.hints == 8 and \
             cards[myaction[1]]['name'][0] == '5' and r.log:
             print("Wasting a clue")

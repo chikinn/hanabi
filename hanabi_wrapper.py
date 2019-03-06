@@ -117,6 +117,10 @@ debug = {} # a dictionary players can write into which will be printed in the en
 
 if args.output and os.path.exists('log.json'):
   os.remove('log.json')
+  for i in range(len(players)):
+    for c in range(10 * (5 if args.game_type == 'vanilla' else 6)):
+        debug[('note', i, c)] = ''
+
 # Play rounds.
 scores = []
 for i in range(args.n_rounds):
@@ -151,5 +155,5 @@ if len(scores) > 1: # Only print stats if there were multiple rounds.
 elif args.verbosity == 'silent': # Still print score for silent single round
     logger.info('Score: ' + str(scores[0]))
 
-debug = {k:v for k, v in debug.items() if v != 0}
+debug = {k:v for k, v in debug.items() if v is not 0 and v is not ''}
 if debug: print("debug info:",debug)
