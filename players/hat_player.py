@@ -6,8 +6,8 @@ description of the strategy. The following table gives the approximate
 percentages of this strategy reaching maximum score (over 10000 games).
 Players | % (no variant) | % (purple) | % (rainbow)
 --------+----------------+------------+-------------
-   4    |      92.5      | 93.2 (old) |    93.0
-   5    |      89.8      | 95.1 (old) |    95.1
+   4    |      92.5      | 93.2 (old) |    92.9
+   5    |      90.1      | 95.1 (old) |    95.2
 """
 
 # ideas for improvement:
@@ -30,7 +30,7 @@ DEBUG = True
 DEBUGVALUES = ['play 5 instead', 'someone cannot clue, but I have a play', 'unsafe discard at 0 clues','safe discard at 0 clues',\
     'clue blocked', 'I misplayed', 'BUG: instructed to discard at 8 clues', 'BUG: instructed to clue with 0 clues', 'instructing to discard critical card',
     'player did wrong action at >0 clues', 'player did not play', 'player played wrong card', 'wrong action: discard at 0 clues', 'someone performed the wrong action',
-    'player played when not instructed to']
+    'player played when not instructed to','we can use the clue from a 5 to reach another player in endgame']
 
 
 ### General utility functions, maybe these should be moved to bot_utils.py
@@ -529,7 +529,7 @@ class HatPlayer(AIPlayer):
         # the number of these actions that are discards
         self.futurediscards = len([action for action in self.other_actions if action[0] == 'discard'])
         # Are we in the endgame now (same when looking at the turn of the modified player)?
-        self.endgame = len(r.deck) < count_unplayed_playable_cards(r, r.progress)
+        self.endgame = count_unplayed_playable_cards(r, r.progress) - len(r.deck)
         # Number of hints during the modified player's turn
         self.modified_hints = r.hints - 1
         # Dictionary sending cardnames to players who play it
@@ -562,14 +562,20 @@ class HatPlayer(AIPlayer):
             i = next(i, r)
         #print("Now at",r.hints,"clues, modified has",self.modified_hints,"minimal",self.min_futurehints,"end",self.futurehints,self.endgame)
 
-    def modified_action(self, cluer, player, dont_play, progress, card_to_player, player_to_card, r):
+    def modified_action(self, r):
         """Modified play for the first player the cluegiver clues. This play can
         be smarter than standard_action"""
-
-        # this is never called on a player's own hand
-        assert self != r.PlayerRecord[player]
-        assert self == r.PlayerRecord[cluer]
+        # some abbreviations
+        cluer = r.whoseTurn
+        player = self.modified_player
+        dont_play = self.will_be_played
+        progress = self.clued_progress
+        card_to_player = self.card_to_player
+        player_to_card = self.player_to_card
         cards = r.h[player].cards
+        # this is never called on a player's own hand
+        assert self == r.PlayerRecord[cluer]
+        assert player != cluer
         x = self.standard_action(cluer, player, dont_play, progress, card_to_player, player_to_card, r.discardpile, r)
         if not MODIFIEDACTION:
             return x
@@ -587,7 +593,7 @@ class HatPlayer(AIPlayer):
                 else:
                     if DEBUG:
                         r.debug["someone cannot clue, but I have a play"] += 1
-                    if not self.endgame:
+                    if self.endgame <= 0:
                         action = self.safe_discard(cards, progress)
                         if action[0] == 'discard': return action
                         action = self.modified_safe_discard(cluer, player, cards, dont_play, r)
@@ -621,20 +627,70 @@ class HatPlayer(AIPlayer):
                 return 'hint', 0
             i = next(i, r)
 
+# todo: in the late endgame, if player can play a card in dont_play, strikes is 1 or lower, just let him play it
 
-        # If you can safely discard and we are not in the endgame yet or nobody can play, just discard
-        if x[0] == 'discard' and ((not self.endgame) or not self.futureplays):
-            return x
+        # If you can safely discard, discard in the following cases:
+        # - we are not in the endgame
+        # - nobody can play
+        # - in some situations in the late game
+        if x[0] == 'discard':
+            if self.endgame <= 0:
+                return x
+            if not self.futureplays:
+                return x
+            # early in the endgame, discard a bit more
+            if self.late_game_discard(r):
+                return x
 
-        # Sometimes you want to discard. This happens if either
-        # - someone is instructed to hint without clues
-        # - few players can play or discard
-        # - everyone else will hint or discard, and it is not the endgame
-        if self.futureplays <= 1 and not self.endgame:
+        # Also discard if there are few plays not in the endgame
+        if self.futureplays <= 1 and self.endgame <= 0:
             return self.modified_discard(x, cards, progress, r)
 
         # we are in the endgame, and there is no emergency, so we stall
         return 'hint', 0
+
+    def late_game_discard(self, r):
+        """Should the modified player discard in the late game?"""
+        cluer = r.whoseTurn
+        cards = r.h[self.modified_player].cards
+
+        if not (self.futureplays == 1 and self.endgame == 1 and not [card for card in cards if not has_been_played(card,r.progress)]):
+            return False
+        # discard unless you see all useful cards and have enough hints
+        all_cards_visible = is_subset(get_all_useful_cardnames(r), names(get_all_visible_cards(cluer, r)))
+        if not all_cards_visible:
+            if self.modified_hints < r.nPlayers - 2:
+                #r.debug['stop'] = 0
+                return True
+            else:
+                return False
+        # this should capture: without discarding we cannot reach the first player with a useful card that is not going to play this round
+        useful_players = [pl for pl in other_players(self.modified_player, r) if pl != cluer and\
+            len([card for card in r.h[pl].cards if not has_been_played(card, r.progress)]) > int(pl in self.player_to_card_current)]
+        if not useful_players: # we win this round
+            # if sum(r.progress.values()) != len(r.suits) * 5 - 1: r.debug['stop'] = 0
+            return True
+        # we need one hint for every player between self.modified_player and useful_player[0]
+        needed_hints = ((useful_players[0] - self.modified_player) % r.nPlayers)
+        playing_player, = self.player_to_card_current.keys()
+        #print("we need",needed_hints,"hints to reach",useful_players,"from",self.modified_player,"and",playing_player,"is playing. We have",self.modified_hints)
+        # we need 1 fewer hint if someone inbetween plays
+        if is_between(playing_player, self.modified_player, useful_players[0]):
+            needed_hints -= 1
+            if DEBUG:
+                r.debug['we can use the clue from a 5 to reach another player in endgame'] += 1
+            #this seems to rarely happen
+            #r.debug['stop'] = 0
+            #print("one fewer")
+            # we need even 1 fewer hint if that player plays a 5 whose hint can be used.
+            if self.player_to_card_current[playing_player][1][0] == '5' and next(playing_player, r) != useful_players[0]:
+                needed_hints -= 1
+                #print("no, two fewer")
+        if self.modified_hints < needed_hints:
+
+            #if sum(r.progress.values()) != len(r.suits) * 5 - 1: r.debug['stop'] = 0
+            return True
+        return False
 
     def modified_safe_discard(self, cluer, player, cards, dont_play, r):
         """Discards which don't hurt for the modified player"""
@@ -731,7 +787,7 @@ class HatPlayer(AIPlayer):
         value = self.initialize_given_clue(me, me, r)
         # Now we need to give a clue to modified_player
         self.prepare_modified_action(r)
-        x = self.modified_action(me, self.modified_player, self.will_be_played, self.clued_progress, self.card_to_player, self.player_to_card, r)
+        x = self.modified_action(r)
         # print("modified action for player",self.modified_player,"is",x)
         cardname = self.get_cardname(x, self.modified_player, r)
         self.resolve_clue(x, cardname, self.modified_player)
@@ -773,7 +829,7 @@ class HatPlayer(AIPlayer):
         #often clue if I can get tempo on a unclued card
         count_current_plays = len([action for action in self.next_player_actions if action[0] == 'play'])
         # print(me, prev_plays, count_prev_plays, count_current_plays, self.endgame, prev_modified_action, modified_action, r.hints, self.useless_card['name'])
-        if modified_action[0] == 'play' and (self.endgame or prev_modified_action[0] == 'hint'): #or count_prev_plays + 2 <= count_current_plays
+        if modified_action[0] == 'play' and (self.endgame > 0 or prev_modified_action[0] == 'hint'): #or count_prev_plays + 2 <= count_current_plays
             return False
 
         # discard if this leaves us at 0 clues.
@@ -783,7 +839,7 @@ class HatPlayer(AIPlayer):
             return 'discard', card
 
         #if I cannot clue any not in endgame, or with at most 1 clue, discard
-        if not self.endgame:
+        if self.endgame <= 0:
             return 'discard', card
         if r.hints <= 1:
             return 'discard', card
@@ -803,7 +859,7 @@ class HatPlayer(AIPlayer):
             print("Cheating! Discarding with 8 available hints")
         if myaction[0] == 'discard' and 0 < len(r.deck) < \
             count_unplayed_playable_cards(r, r.progress) and r.verbose:
-            print("Discarding in endgame")
+            print("Discarding in endgame with",r.hints,"clue" + ("s" if r.hints != 1 else "") + ".")
         if myaction[0] == 'play' and r.hints == 8 and \
             cards[myaction[1]]['name'][0] == '5' and r.log:
             print("Wasting a clue")
