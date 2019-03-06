@@ -6,17 +6,9 @@ description of the strategy. The following table gives the approximate
 percentages of this strategy reaching maximum score (over 10000 games).
 Players | % (no variant) | % (purple) | % (rainbow)
 --------+----------------+------------+-------------
-   4    |      92.5      | 93.2 (old) |    92.9
-   5    |      90.1      | 95.1 (old) |    95.2
+   4    |      94.2      |    94.4    |    94.2
+   5    |      91.2      |    95.7    |    95.7
 """
-
-# ideas for improvement:
-# make discarding when modified_player you can play dependent on whether the player at 0 clues has a safe discard (and is the last player to act)
-# tell about more useless cards:
-  # if you give a discard clue, give it to a card which is not yet marked as such before
-  # instead of repeating a play clue, tell about a discardable card
-# Add some endgame-specific knowledge: do not play if you cannot have playable cards. Try to play if deck == 0 and you don't see all playable cards
-# Decide to clue if you can give a useful clue
 
 from hanabi_classes import *
 from bot_utils import *
@@ -30,7 +22,7 @@ DEBUG = True
 DEBUGVALUES = ['play 5 instead', 'someone cannot clue, but I have a play', 'unsafe discard at 0 clues','safe discard at 0 clues',\
     'clue blocked', 'I misplayed', 'BUG: instructed to discard at 8 clues', 'BUG: instructed to clue with 0 clues', 'instructing to discard critical card',
     'player did wrong action at >0 clues', 'player did not play', 'player played wrong card', 'wrong action: discard at 0 clues', 'someone performed the wrong action',
-    'player played when not instructed to','we can use the clue from a 5 to reach another player in endgame']
+    'player played when not instructed to','we can use the clue from a 5 to reach another player in endgame','yolo','successful yolo','unsuccessful yolo']
 
 
 ### General utility functions, maybe these should be moved to bot_utils.py
@@ -185,7 +177,16 @@ class HatPlayer(AIPlayer):
         function 'think_at_turn_start', which is executed for every player at the start of every turn,
         and also when giving a clue."""
         # do I have a card which can be safely discarded?
-        self.useless_card = None # todo, make this a list, for all players, and stack safe discards when you would currently give no new information to a player
+        # todo: make this a list of list, with a list of known useless cards for each player,
+            # stack safe discards when you would currently give no new information to a player
+            # if you give a discard clue, clue the oldest unknown useless card (hint if it doesn't exist?)
+            # instead of repeating a play clue, mark oldest unknown useless card
+            # make a list of useful cards in your hand
+                # a card is known useful when it was behind a card which was marked useless
+                # it should be a list containing pairs (card, dic), where card is the card object,
+                # dic is a dictionary {c:n for c in r.suits} where n is the minimal value of the card (which is r.progress[c] + 2) (approximately?) if n <= 5
+            # In the last round of the game, play a known useful card, or the most likely useful card in your hand if you don't see all cards
+        self.useless_card = None
         # information of all clues given, which are not fully interpreted yet. It is a list of given clues
         # Every clue consists of a dict with as info:
         # 'value': clue value
@@ -237,7 +238,8 @@ class HatPlayer(AIPlayer):
             if card['misplayed'] and DEBUG:
                 r.debug['I misplayed'] += 1
             self.resolve_clue(action, cardname, player)
-            self.resolve_given_clues(me, r)
+            if self.given_clues: # this can be false if you yolo in the endgame
+                self.resolve_given_clues(me, r)
             assert not self.given_clues
             return
         # If I'm clued, update my value
@@ -512,7 +514,7 @@ class HatPlayer(AIPlayer):
         """Discard in the standard action"""
         # Do I want to discard?
         discardCards = get_played_cards(cards, progress)
-        if discardCards: # discard a card which is already played
+        if discardCards: # discard a card which is already played (the oldest)
             return 'discard', cards.index(discardCards[0])
         discardCards = get_duplicate_cards(cards)
         if discardCards: # discard a card which occurs twice in your hand
@@ -743,6 +745,11 @@ class HatPlayer(AIPlayer):
                 for s in DEBUGVALUES:
                     if s not in r.debug:
                         r.debug[s] = 0
+                # for i in [0,1]:
+                #     for j in range(4):
+                #         s = 'yolo: played ' + str(i) + ', correct was ' + str(j)
+                #         if s not in r.debug:
+                #             r.debug[s] = 0
             for i in range(n):
                 # initialize variables which contain the memory of this player.
                 # These are updated after every move of any player
@@ -756,14 +763,29 @@ class HatPlayer(AIPlayer):
         myaction = 'hint', 0
         if self.given_clues:
             myaction = self.resolve_given_clues(me, r)
-            #print("My action is",myaction)
-            if myaction[0] == 'play':
+        if myaction[0] == 'play':
+            return self.execute_action(myaction, r)
+        # in the endgame, yolo a card if you don't see all playable
+        if not r.deck and r.lightning < 2 and not is_subset(get_all_playable_cardnames(r), names(get_all_visible_cards(me, r)) + r.discardpile):
+            slot = 0
+            # if I have a known useless card in slot 0, play slot 1
+            if self.useless_card is not None and self.useless_card in r.h[me].cards and not r.h[me].cards.index(self.useless_card):
+                slot = 1
+            if DEBUG:
+                r.debug['yolo'] += 1
+                # peek at my hand to test if my yolo is successful for debugging (I cannot check it next turn if this is the last turn of the game)
+                if is_playable(r.h[me].cards[slot], r.progress):
+                    r.debug['successful yolo'] += 1
+                else:
+                    r.debug['unsuccessful yolo'] += 1
+                # s = 'yolo: played ' + str(slot) + ', correct was ' + str([is_playable(card, r.progress) for card in r.h[me].cards].index(True))
+                # r.debug[s] += 1
+            return self.execute_action(('play', slot), r)
+        if myaction[0] == 'discard' and (not r.hints or (me == self.modified_player and MODIFIEDACTION)):
+            if r.hints != 8:
                 return self.execute_action(myaction, r)
-            if myaction[0] == 'discard' and (not r.hints or (me == self.modified_player and MODIFIEDACTION)):
-                if r.hints != 8:
-                    return self.execute_action(myaction, r)
-                elif DEBUG: # this can happen with a blocked clue
-                    r.debug['BUG: instructed to discard at 8 clues']
+            elif DEBUG: # this can happen with a blocked clue
+                r.debug['BUG: instructed to discard at 8 clues']
 
 
 
@@ -799,8 +821,6 @@ class HatPlayer(AIPlayer):
         if can_discard and y:
             self.clued_progress_current = self.clued_progress.copy()
             return self.execute_action(y, r)
-
-        # todo: at this point decide to discard if your clue is bad and you have a safe discard
         self.finalize_given_clue(me, r)
         value = (value + self.action_to_number(x)) % 9
         clue = self.number_to_clue(value, me, r)
@@ -818,9 +838,7 @@ class HatPlayer(AIPlayer):
         diff = (self.modified_player - me - 1) % r.nPlayers
         prev_modified_action = prev_plays[diff] if len(prev_plays) > diff else 'hint', 0
         assert r.hints
-        # todo:
-        # - give a clue if you can get tempo on a card in the hand of a player before `cluer`
-        # - discard when you steal the last clue from someone who has to clue
+
         if r.hints == 8:                           return False
         if self.useless_card is None:              return False
         if self.useless_card not in r.h[me].cards: return False
@@ -833,7 +851,7 @@ class HatPlayer(AIPlayer):
             return False
 
         # discard if this leaves us at 0 clues.
-        # todo: I can make this check better: we want to check the number of clues for the first discarding player
+        # todo: I can make this check slightly better: we want to check the number of clues for the first discarding player
         # (which might be after modified_player and might be me), and check whether they have a known useless card in hand
         if not self.modified_hints:
             return 'discard', card

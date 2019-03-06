@@ -150,6 +150,10 @@ def count_unplayed_playable_cards(r, progress):
                 break
     return n
 
+def get_all_playable_cardnames(r):
+    """Gets all cards that can be played now"""
+    return [str(r.progress[suit] + 1) + suit for suit in r.suits if r.progress[suit] < 5]
+
 def get_all_useful_cardnames(r):
     """Gets all cards that could be playable in future"""
     l = []
