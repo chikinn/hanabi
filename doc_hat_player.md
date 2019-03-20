@@ -1,13 +1,15 @@
-(This document was up-to-date on July 15, 2016).
-
 This is a description of the stategy implemented in hat_player.py. The strategy only works for 4 or
 5 players. The win percentages of the strategy (achieving maximal score) are approximately as
 follows:
 
-|Players | % (6 suits) | % (5 suits) |
+|Players | % (5 suits) | % (6 suits) |
 |:------:|:-----------:|:-----------:|
-|   4    |     79      |     84      |
-|   5    |     87      |    79-80    |
+|   4    |    94.2     |    94.4     |
+|   5    |    91.2     |    95.7     |
+
+This document describes the strategy which the bots had until March 2019. In March 2019 major
+improvements have been made, before this, the winrates were approx. 10pp lower. Some brief remarks
+about the changes are made at the bottom of this page.
 
 
 # Comparison with paper
@@ -239,27 +241,31 @@ corresponding clue.
 
 ## Clue encoding
 
-[Update February 2019: `hat_player` now doesn't give empty clues anymore.]
-
 There are two variants of Hanabi. One variant allows you to give a clue pointing to 0 cards ("You
 have no blue cards in your hand") while the other disallows it. The first variant is slightly
 easier, especially for a strategy using a coding function for the clues, because in that variant
 there are always 40 possible clues in a 5 player game, and 30 possible clues in a 4 player game. In
 this variant, the clue encoding strategy can be very simple: just pick 9 out of those 30/40 clues to
-encode the 9 remainder classes modulo 9. This is what the current implementation does.
+encode the 9 remainder classes modulo 9.
 
-It is possible to adapt the implementation to the second variant. In a game without multicolor it's always possible to give 9 different clues which can be unambiguously interpreted by the other players (and 12 in a 5 player game). You can give each players the following unambiguous three clues:
+However, it is not hard to also encode 9 clues when empty clues are disallowed.
+Since February 2019, this bot never gives empty clues anymore.
+You can give each players the following unambiguous three clues:
 
 * Clue their newest card with a color clue
 * Clue their newest card with a number clue
 * Give any clue not involving their newest card (this is always possible in a non-multicolor game).
 
+This is always possible if you don't play with multicolor (rainbow) cards.
 In a multicolor game it's a bit trickier, since you cannot always give the last clue. Namely it's
 impossible iff their first card is a multicolor card, and all the cards in their hand have the same
-number. However, he following encoding works 99.99+% of the times in a 5 player game: Clues 0-7 are
+number. This happens approximately once in every 100 games. Therefore, in the rainbow variant for four players,
+this bot performs 0.2pp worse than in purple (a six suit game where the extra suit is its own color).
+For 5 players we do something slightly different: Clues 0-7 are
 given as above, cluing the first card of another player by either color or number. Clue 8 is given
 by giving *any* other player a clue not involving their first card. Since it's overwhelmingly
-unlikely that you cannot do that, it doesn't matter what you do if that's impossible (even if you resign that case it doesn't significantly change the win percentage).
+unlikely that you cannot do that, it doesn't matter what you do if that's impossible.
+This situation has never come up in the hundreds of thousands of simulations.
 
 ## Thinking out of turn
 
@@ -301,6 +307,26 @@ currently executing their turn). This ensures that there is no condition checked
 information of the current player to determine whether to call these functions. To ensure that
 "think_out_of_turn" is called every turn "play" only returns using "execute_action", which always
 executes "think_out_of_turn" for every other player.
+
+## Improvements in March 2019
+
+In March 2019 the bot was greatly rewritten. The main changes are listed below.
+
+* Players (other than the player receiving the "modified action") are allowed to give a clue, even when they are instructed to discard. Every player can deduce that that player received a discard clue (and which discard clue they received), and that they decided to ignore that to give a clue instead.
+* Therefore, if someone has a useless card, we will always tell them to discard. They can ignore it if they think that is better.
+* The bot has some better endgame-specific strategies.
+* The biggest change is that a hint can change the meaning of a previous hint. Remember that a hint instructs every other player to do something. If a previous clue instructed someone to discard (or hint), you can now instruct them to play a card.
+  - You cannot change the action of someone who is already going to play a card.
+  - For example, Alice clues that Bob should play r1, Cathy should give a clue, and Donald and Emily should discard slot 1.
+  - Also suppose that Donald has a r2 in hand. Note that Alice couldn't tell Donald to play r2: there would be no way for Bob to know that Donald's r2 would become playable.
+  - However, Cathy can tell Donald to play r2, and Donald can play it immediately
+  - Now Emily has a tricky read to do:
+    + Donald played r2, but there was no way that Alice could clue Donald to play the r2.
+    + Therefore, Cathy clued Donald to play r2.
+    + However, Emily still has to decode Alice's original clue.
+    + Here the restriction comes in that Cathy can only change Donald's action if Alice didn't give a play clue to Donald. Since Emily knows that Alice didn't give a play clue, Emily can exactly determine what action Alice gave to Donald (discard the oldest useless card).
+    + Hence Emily knows what Alice clued to Donald, hence also what Alice clued to Emily.
+  - This example also works if the order of Bob and Cathy is swapped. Bob will play into Alice's original clue, and not yet think about the meaning of Cathy's clue until he has played his card.
 
 ## Improvements
 
