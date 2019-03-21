@@ -12,7 +12,7 @@ Command-line arguments (see usage):
   loss_score: Whether to award points after a game is lost
 """
 
-import sys, argparse, logging, random
+import sys, argparse, logging, random, os
 from time import gmtime, strftime
 from math import sqrt
 from play_hanabi import play_one_round, player_end_game_logging
@@ -41,6 +41,9 @@ parser.add_argument('-s', '--seed', default=-1,
 parser.add_argument('-p', '--police',
   dest='police', action='store_true', help='Turns on the police to catch cheaters')
 parser.set_defaults(police=False)
+parser.add_argument('-o', '--output',
+  dest='output', action='store_true', help='Output a JSON file of the game in log.json')
+parser.set_defaults(output=False)
 
 args = parser.parse_args()
 
@@ -109,13 +112,26 @@ if args.verbosity == 'log':
 if args.seed >= 0:
     random.seed(args.seed)
 
+debug = {} # a dictionary players can write into which will be printed in the end. Useful for collecting statistics
+# if you set r.debug['stop'] = 0, then the log of that game will be appended to log.json, and no new game will be started
+
+if args.output and os.path.exists('log.json'):
+  os.remove('log.json')
+  for i in range(len(players)):
+    for c in range(10 * (5 if args.game_type == 'vanilla' else 6)):
+        debug[('note', i, c)] = ''
+
 # Play rounds.
 scores = []
 for i in range(args.n_rounds):
+    if 'stop' in debug:
+        logger.info("Games interrupted by player after round " + str(i) + "!")
+        args.n_rounds = i
+        break
     if args.verbosity in ('verbose', 'log'):
         logger.info('\n' + 'ROUND {}:'.format(i))
     score = play_one_round(args.game_type, players, names, args.verbosity,
-                           args.loss_score, args.police)
+                           args.loss_score, args.police, args.output, debug)
     scores.append(score)
     if args.verbosity != 'silent':
         logger.info('Score: ' + str(score))
@@ -138,3 +154,6 @@ if len(scores) > 1: # Only print stats if there were multiple rounds.
                 .format(100*perfect_games, 100*std_perfect_games))
 elif args.verbosity == 'silent': # Still print score for silent single round
     logger.info('Score: ' + str(scores[0]))
+
+debug = {k:v for k, v in debug.items() if v is not 0 and v is not ''}
+if debug: print("debug info:",debug)

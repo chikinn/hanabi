@@ -69,7 +69,7 @@ class Round(object):
     discardpile: list of (names of) cards which are discarded
     """
 
-    def __init__(self, gameType, players, names, verbosity, isPoliced):
+    def __init__(self, gameType, players, names, verbosity, isPoliced, debug):
         """Instantiate a Round and its Hand sub-objects."""
         self.gameType  = gameType
         self.suits = VANILLA_SUITS
@@ -96,6 +96,7 @@ class Round(object):
         self.log = (verbosity == 'log')
         self.zazz = ['[HANDS]', '[PLAYS]']
         self.isPoliced = isPoliced
+        self.debug = debug
 
         self.logger = logging.getLogger('game_log')
 
@@ -127,13 +128,15 @@ class Round(object):
 
         random.shuffle(deck)
         self.deck = deck
+        self.startingDeck = deck[:]
+        self.startingDeckSize = len(deck)
 
         handSize = 4
         if self.nPlayers < 4:
             handSize += 1
         for i in range(self.nPlayers): # Deal cards to all players.
             for j in range(handSize):
-                self.h[i].add(self.draw(), self.turnNumber - handSize + j)
+                self.h[i].add(self.draw(), self.turnNumber - handSize + j, self.startingDeckSize-len(self.deck)-1)
             if self.verbose:
                 self.h[i].show(self.zazz[0], self.logger)
                 self.zazz[0] = ' ' * len(self.zazz[0])
@@ -146,11 +149,12 @@ class Round(object):
         """Drop the card, draw a new one, and update public info."""
         if not card['known']:
             self.cardsLeft.remove(card['name'])
+        card['position'] = hand.cards.index(card)
         ReplacedIndex = hand.drop(card)
         self.DropIndRecord.append(ReplacedIndex)
         self.discardpile.append(card['name'])
         if self.deck != []:
-            hand.add(self.draw(), self.turnNumber)
+            hand.add(self.draw(), self.turnNumber, self.startingDeckSize-len(self.deck)-1)
             return True # There was still a card to draw.
         return False
 
@@ -185,6 +189,8 @@ class Round(object):
             assert self.hints != 0
             targetPlayer, info = playValue
             assert targetPlayer != self.whoseTurn # Cannot hint self.
+            assert info in self.suits or info in SUIT_CONTENTS
+            assert info != '?'
             targetHand = self.h[targetPlayer]
             for card in targetHand.cards:
                 suit = card['name'][1]
@@ -221,6 +227,7 @@ class Round(object):
                     if value == '5':
                         self.hints = min(self.hints + 1, N_HINTS)
                 else: # Illegal play
+                    card['misplayed'] = True
                     self.lightning += 1
                     desc += ' (DOH!)'
 
@@ -243,6 +250,9 @@ class Round(object):
             a color or a number; chronological; duplicates allowed
           indirect (list of char): same as direct but info does not match card
           known (bool): whether card can be deduced solely from public info
+          cardNo (int): unique number of the card
+          position (int): the position from which the card was played or discarded (0-4). Equals -1 if still in hand
+          misplayed (bool): set to true if this card was misplayed
         seat (int): Player ID number (starting player is 0).
         """
 
@@ -257,14 +267,17 @@ class Round(object):
             out = [card['name'] for card in self.cards]
             logger.info(zazz + ' ' + self.name + ': ' + ' '.join(out))
 
-        def add(self, newCard, turnNumber):
+        def add(self, newCard, turnNumber, cardNo):
             """Add a card to the hand."""
             self.cards.append({ 'name'     : newCard,
                                 'time'     : turnNumber,
                                 'direct'   : [],
                                 'indirect' : [],
                                 'known'    : False,
-                                'sec_name' : newCard})
+                                'sec_name' : newCard,
+                                'cardNo'   : cardNo,
+                                'position' : -1,
+                                'misplayed': False })
 
         def drop(self, card):
             """Discard a card from the hand."""
